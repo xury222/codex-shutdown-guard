@@ -1,0 +1,16 @@
+﻿{
+  "pollSeconds": 60,
+  "totalGraceSeconds": 180,
+  "nativeShutdownSeconds": 120,
+  "sessionStartSkewSeconds": 5,
+  "normalDiscoverySeconds": 60,
+  "countdownDiscoverySeconds": 60,
+  "stableSamplesRequired": 3,
+  "usageStaleSeconds": 180,
+  "logRetentionDays": 0,
+  "showUsagePanel": true,
+  "usagePanelTopMost": true,
+  "usagePanelOpacity": 0.94,
+  "dryRun": false,
+  "taskInactivitySeconds": 1800
+}

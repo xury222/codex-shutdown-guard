@@ -1,0 +1,17 @@
+node_modules/
+__pycache__/
+*.pyc
+*.tmp
+*.log
+config.json
+status.json
+installation.json
+ignored-tasks.json
+usage-panel-state.json
+codex-launch-settings.json
+codex-startup-settings.json
+codex-startup-session.json
+codex-startup-stop.json
+test-output/
+.codex-shutdown-guard-install.json
+/dist/

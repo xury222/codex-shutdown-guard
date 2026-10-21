@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex 关机守卫"
+  short_description: "管理本机所有 Codex 任务的完成后关机、额度面板与当前代理启动"
+  default_prompt: "使用 $codex-shutdown-guard 查看守卫状态、活动任务与账户额度。"
