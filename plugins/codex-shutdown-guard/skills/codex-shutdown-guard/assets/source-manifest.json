@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.1.1",
   "source": "native/",
   "snapshotDate": "2026-10-21",
   "notes": "Latest native monitor and UI source with portable installation and shared installation discovery. User configuration, runtime state, sessions, logs and credentials are excluded.",

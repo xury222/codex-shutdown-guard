@@ -1,36 +1,18 @@
-# Codex 关机守卫插件 1.1.0
+# Codex 关机守卫插件 1.1.1
 
 插件为 Windows 原生 CodexShutdownGuard 提供聊天控制入口，沿用原托盘、任务监控与额度面板。
 
 ## 安装
 
-原生程序使用系统 Windows PowerShell 5.1。聊天 MCP 服务另需本机可用的 `node` 命令；本包不附带 Node.js 安装器，无需 npm 依赖。
+普通用户请下载 [完整 Windows 包](https://github.com/xury222/codex-shutdown-guard/releases/tag/v1.1.1)，完整解压后双击根目录的 `Install.cmd`，在窗口中点击“安装并启动”。勾选“同时安装 / 更新 Codex 聊天插件（可选，需联网）”后，窗口会在后台执行插件安装，无需手动输入命令。
 
-在本目录打开 PowerShell，由用户执行原生程序安装：
+原生守卫使用系统 Windows PowerShell 5.1，不需要 Node.js、Git 或 Codex CLI。聊天插件另需 Node.js 18 或更新版本、支持插件命令的 Codex CLI，以及 Git；窗口会检测依赖，包括 Codex 桌面应用自带的 CLI。缺少依赖时，可通过窗口链接前往官网下载，补齐后重新打开安装窗口。安装器不会自动下载或安装依赖，Node.js 建议选择官网 LTS 版本。
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1
-```
+通过窗口安装的聊天插件使用固定 GitHub 版本 `v1.1.1`，无需保留解压目录。完成后关闭并重新打开 Codex，以刷新工具。安装器不会重启 Codex，也不会自动启用已停用的插件。
 
-只安装、不启动时，在命令末尾加 `-NoStart`。新安装默认位于 `%LOCALAPPDATA%\Programs\CodexShutdownGuard`；已有有效注册或带安装标记的旧安装会继续复用。默认注册文件固定为 `%LOCALAPPDATA%\CodexShutdownGuard\installation.json`，记录 `installRoot` 和 `stateRoot`；自定义 `StateRoot` 时仍通过该文件发现安装。守卫已布防时，安装器会拒绝更新；先取消自动关机，再手动运行安装命令。
+新安装默认位于 `%LOCALAPPDATA%\Programs\CodexShutdownGuard`，兼容已有有效注册及带产品标记的旧安装。固定注册文件 `%LOCALAPPDATA%\CodexShutdownGuard\installation.json` 记录 `installRoot` 和 `stateRoot`。更新会保留配置；守卫已布防时须先取消自动关机再安装。
 
-聊天插件可从 GitHub 的固定版本安装：
-
-```powershell
-codex plugin marketplace add xury222/codex-shutdown-guard --ref v1.1.0
-codex plugin add codex-shutdown-guard@codex-shutdown-guard-local
-```
-
-从完整 Windows 发行包安装时，也可在解压根目录使用本地来源：
-
-```powershell
-codex plugin marketplace add .
-codex plugin add codex-shutdown-guard@codex-shutdown-guard-local
-```
-
-之后在 Codex 中启用插件，并在本地聊天中使用。完整 Windows 发行包的本地 marketplace 配置位于 `.agents/plugins/marketplace.json`；只解压本插件目录不包含该配置。使用本地来源时，应保留解压目录供 marketplace 读取。
-
-启用插件不会自动安装原生程序或布防。首次安装时，“启动 Codex 时自动启动守卫”默认关闭；更新保留已有设置。原生守卫启动后也默认未布防。
+守卫启动后默认未布防。“启动 Codex 时自动启动守卫”首次安装默认关闭；启用聊天插件本身不会安装原生程序或开启自动关机。完整步骤见 [仓库安装说明](https://github.com/xury222/codex-shutdown-guard/blob/v1.1.1/docs/INSTALL.md)。
 
 ## 聊天控制
 
@@ -48,20 +30,33 @@ codex plugin add codex-shutdown-guard@codex-shutdown-guard-local
 
 示例：“查看关机守卫状态和账户额度”“本轮全部任务完成后关机”“取消自动关机”“启动 Codex 时自动启动守卫”。两个启动选项相互独立，都不会开启自动关机。
 
-原生面板提供任务无视与恢复、主任务和子代理归属、完整任务信息、额度窗口与重置时间，以及显示、隐藏、拖动和位置保存。托盘中的自动关机操作合并为一个勾选项，取消勾选即取消自动关机；托盘“查看状态”已移除，只读聊天查询继续保留。
+原生面板提供任务无视与恢复、主任务和子代理归属、完整任务信息、额度窗口与重置时间，以及显示、隐藏、拖动和位置保存。托盘自动关机操作为一个勾选项，取消勾选即取消自动关机。
 
 状态查询包含快照时间和新鲜度。控制请求可能排队，需再次查询状态确认执行结果。自动关机仍由原生守卫判断，等待、倒计时和撤销规则见 [原生程序说明](skills/codex-shutdown-guard/assets/native/README.md)。
 
 ## 程序与状态
 
-运行时读取已注册的有效安装，兼容带产品安装标记的每用户目录与旧 `D:\Program\CodexShutdownGuard`。无有效安装时会报告缺失，不会为了完成状态查询而安装程序。
+插件读取已注册的有效安装，兼容带产品标记的每用户目录和旧 `D:\Program\CodexShutdownGuard`。无有效安装时会报告缺失，不会为完成查询而安装程序。
 
 随包原生源码位于 `skills/codex-shutdown-guard/assets/native`，哈希清单位于 `skills/codex-shutdown-guard/assets/source-manifest.json`。插件不会自动用随包源码覆盖已安装程序。本包不含用户配置、日志、Codex 会话或账户凭据。
 
-卸载原生程序时，在本目录运行：
+完整 Windows 包根目录的 `Uninstall.cmd` 可打开守卫卸载窗口；聊天插件在 Codex 插件管理中单独移除。本插件要求 Windows 本机执行，网页或手机端无法直接运行包内程序。
+
+## 可选：单插件包与手动安装
+
+单插件 ZIP 不包含根目录的双击安装窗口或 marketplace 配置。需要这些入口时应下载完整 Windows 包。
+
+在本插件目录打开 PowerShell，可手动安装原生守卫；只安装不启动时加 `-NoStart`：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\Uninstall.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1
 ```
 
-聊天插件可在 Codex 插件管理中单独移除，原生程序需单独卸载。本插件要求 Windows 本机执行，网页或手机端无法直接运行包内程序。完整安装步骤及发行包下载见 [GitHub 仓库](https://github.com/xury222/codex-shutdown-guard)。
+聊天插件可从固定 GitHub 版本安装：
+
+```powershell
+codex plugin marketplace add xury222/codex-shutdown-guard --ref v1.1.1
+codex plugin add codex-shutdown-guard@codex-shutdown-guard-local
+```
+
+使用完整包的本地来源时，在解压根目录将第一条命令改为 `codex plugin marketplace add .`，并保留该目录。已有同名来源时请先核对；安装窗口仅处理可确认属于本仓库的注册。

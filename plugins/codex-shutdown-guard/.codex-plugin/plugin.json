@@ -1,6 +1,6 @@
 {
   "name": "codex-shutdown-guard",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Windows local Codex task monitoring, account quota panel, guarded shutdown and optional startup integration.",
   "interface": {
     "displayName": "Codex 关机守卫",

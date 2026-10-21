@@ -1,4 +1,31 @@
-# Release validation: 1.1.0
+# Release validation: 1.1.1
+
+Validated on Windows with Windows PowerShell 5.1, Node.js 24.15.0 and the locally installed Codex CLI on 2026-10-21.
+
+| Focused check | Passed |
+| --- | ---: |
+| Setup worker and native-operation result handling | 24 |
+| Optional plugin dependencies, installation and recovery | 102 |
+| GUI event flows | 28 |
+| CMD launchers and exit codes | 4 |
+| Real isolated desktop/startup shortcut creation and removal | 7 |
+| MCP protocol and version regression | 8 |
+| Extracted-archive native wrappers | 18 |
+| Total | 191 |
+
+The setup worker and GUI checks used complete inert package fixtures. They covered success, an armed-native refusal, partial chat-plugin failure, special-character paths, exit-code propagation, and blocking window closure until the worker result was processed. Native installation and actual shutdown entry points in these fixtures were never executed. Both install and uninstall window previews were inspected for clipped text.
+
+Optional plugin tests covered Node 18+ and Git detection, bundled desktop CLI discovery, refreshed child-only PATH, npm CMD shims, a disabled existing plugin, unrelated or ambiguous marketplace ownership, fixed-tag upgrades, rollback failure, invalid CLI results, and timeouts. A timed-out operation reports an uncertain outcome and performs no competing rollback.
+
+Separate real CLI tests used an independent Codex home, local Git repositories and a per-process Git URL rewrite, with no real user configuration or MCP execution. They verified upgrading 1.1.0 to 1.1.1, an idempotent second installation, and restoration of the old tag/version after a missing-tag failure. An unrelated marketplace and plugin were preserved.
+
+The shortcut check used the real native installer with `-NoStart` and explicit independent program, registration, state, Startup and Desktop directories. It created and removed only fixture shortcuts; neither shortcut armed automatic shutdown. The user's actual Desktop and Startup folders were untouched.
+
+The built Windows ZIP was extracted and its bundled setup suites rerun. The public native wrappers also completed an isolated clean install, byte-preserving upgrade, read-only bridge inspection and uninstall. All 29 packaged PowerShell scripts/modules parsed on Windows PowerShell 5.1. The archives are reread for CRC and per-file hash verification before upload.
+
+The native monitor and shutdown logic are unchanged from 1.1.0. The previous 932-check record below is historical and was not rerun in full for this installer update. No real PC shutdown, reboot, live guard update or acceptance test on another computer was performed.
+
+## Previous release: 1.1.0
 
 Validated on Windows with Windows PowerShell 5.1 and Node.js 24.15.0 on 2026-10-21.
 
