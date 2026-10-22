@@ -85,6 +85,9 @@ function Update-CodexTaskManagerView {
             Assert-Layout ($sender.MaximizeBox) 'dialog can be maximized'
             Assert-Layout ($view.List.Items.Count -eq 3) 'production view renders mock tasks'
             Assert-Layout ($view.Summary.Text -match '当前条目：3') 'summary contains current task count'
+            Assert-Layout ($view.Summary.Text -match '阻止关机：1') 'only the main task is included in the blocking summary'
+            Assert-Layout ($view.List.Items[1].SubItems[1].Text -eq '活动 · 不阻塞') 'first subagent row reports non-blocking activity'
+            Assert-Layout ($view.List.Items[2].SubItems[1].Text -eq '活动 · 不阻塞') 'second subagent row reports non-blocking activity'
             Assert-Layout ($view.Summary.Text -match '主任务 1  ·  子代理 2  ·  内部审批 0') 'summary identifies main task and subagent counts'
             Assert-Layout ($view.Summary.Text -match '扫描 \d{2}:\d{2}:\d{2}') 'summary includes the snapshot scan time'
             Assert-TaskManagerBounds -View $view -Stage $script:Scenario.Name
@@ -130,7 +133,7 @@ $script:TaskManagerView = $null
 $script:ThreadTitles = @{}
 $script:MeasuredLayouts = @()
 $script:LastSnapshot = [pscustomobject]@{
-    ActiveCount = 3; UnknownCount = 0; TaskCount = 3; IgnoredCount = 0
+    ActiveCount = 1; UnknownCount = 0; TaskCount = 3; ObservedShutdownTaskCount=1; IgnoredCount = 0
     ObservedUnknownCount = 0; HasPendingReads = $true
     CapturedAtUtc = [datetime]'2026-10-20T17:25:32Z'
     TaskEntries = @(
@@ -141,8 +144,8 @@ $script:LastSnapshot = [pscustomobject]@{
 }
 $script:MockRows = @(
     [pscustomobject]@{ Title='设计示例任务入口与任务进度画面'; StateText='活动 · 阻塞'; Cwd='C:\ExampleProject'; Updated='10-21 01:25:30'; TurnId='turn-one'; Tooltip='主任务'; Checked=$false; Tone='Normal' },
-    [pscustomobject]@{ Title='子代理：检查示例任务布局（所属父任务：设计示例任务入口与任务进度画面）'; StateText='活动 · 阻塞'; Cwd='C:\ExampleProject'; Updated='10-21 01:25:31'; TurnId='turn-two'; Tooltip='测试示例：子代理所属父任务'; Checked=$false; Tone='Normal' },
-    [pscustomobject]@{ Title='子代理：验证任务进度流程（所属父任务：设计示例任务入口与任务进度画面）'; StateText='活动 · 阻塞'; Cwd='C:\ExampleProject'; Updated='10-21 01:25:32'; TurnId='turn-three'; Tooltip='测试示例：子代理所属父任务'; Checked=$false; Tone='Normal' }
+    [pscustomobject]@{ Title='子代理：检查示例任务布局（所属父任务：设计示例任务入口与任务进度画面）'; StateText='活动 · 不阻塞'; Cwd='C:\ExampleProject'; Updated='10-21 01:25:31'; TurnId='turn-two'; Tooltip='测试示例：子代理所属父任务'; Checked=$false; Tone='Normal' },
+    [pscustomobject]@{ Title='子代理：验证任务进度流程（所属父任务：设计示例任务入口与任务进度画面）'; StateText='活动 · 不阻塞'; Cwd='C:\ExampleProject'; Updated='10-21 01:25:32'; TurnId='turn-three'; Tooltip='测试示例：子代理所属父任务'; Checked=$false; Tone='Normal' }
 )
 [void](New-Item -ItemType Directory -Path $OutputDirectory -Force)
 foreach ($scenario in @(

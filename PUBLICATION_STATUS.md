@@ -1,6 +1,6 @@
 # 分发与官方目录
 
-本项目通过 [GitHub 仓库](https://github.com/xury222/codex-shutdown-guard) 和 [Releases](https://github.com/xury222/codex-shutdown-guard/releases) 分发源码及 Windows 安装包。1.1.1 的完整 Windows 包提供双击安装与卸载窗口，单插件包用于单独管理插件目录。
+本项目通过 [GitHub 仓库](https://github.com/xury222/codex-shutdown-guard) 和 [Releases](https://github.com/xury222/codex-shutdown-guard/releases) 分发源码及 Windows 安装包。1.1.2 调整关机等待规则，子代理和内部审批不再单独阻止关机。完整 Windows 包继续提供双击安装与卸载窗口，单插件包用于单独管理插件目录。
 
 GitHub 分发与 OpenAI 官方插件目录上架是两个独立流程；本项目尚未上架官方目录。
 

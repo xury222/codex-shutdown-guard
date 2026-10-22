@@ -1,4 +1,40 @@
-# Release validation: 1.1.1
+# Release validation: 1.1.2
+
+Validated on Windows with Windows PowerShell 5.1 and Node.js on 2026-10-22. All existing native suites listed below were rerun for this patch; the subagent-policy suite is new. The table includes completed checks only.
+
+| Suite | Passed |
+| --- | ---: |
+| Native state machine | 90 |
+| Guardian review filtering | 118 |
+| Native repair and panel behavior | 66 |
+| Session and subagent identity | 67 |
+| Task status metadata | 31 |
+| Task manager layout | 126 |
+| Tray toggle | 20 |
+| Codex launch boundary | 72 |
+| Codex startup option | 83 |
+| Isolated startup process smoke | 16 |
+| Portable installation | 81 |
+| Installation process lifecycle | 47 |
+| Subagent shutdown policy | 210 |
+| PowerShell bridge | 143 |
+| Node MCP | 8 |
+| Setup worker and native-operation result handling | 24 |
+| Optional plugin dependencies, installation and recovery | 102 |
+| Extracted-archive native wrappers | 18 |
+| Total | 1322 |
+
+The policy tests keep identified subagents and internal reviews visible while excluding them from shutdown blocking. They cover active and stale turns, incomplete or malformed history, read errors, and the transition after a main task completes. Main-task and unidentified-source problems, plus global discovery errors, retain fail-closed behavior. Subagent-only activity does not satisfy the first-main-task observation requirement, restart a countdown or cancel an existing countdown. Task-manager and status checks verify that labels, counts and serialized blocking flags agree.
+
+The bridge suite initially failed because its Windows PowerShell 5.1 child inherited a PowerShell 7 module path, making `Get-FileHash` unavailable. All 143 bridge checks passed after restricting the test process's `PSModulePath` to the system Windows PowerShell 5.1 modules. This was a test-environment correction; no production-code change was made for that failure.
+
+The locally installed guard was refreshed while unarmed through the native installer with `-NoShortcuts`. The configuration and both startup-preference files retained identical byte hashes, and the installed core module and main script matched the source hashes. A fresh schema-8 runtime snapshot confirmed that main tasks still block and observed child tasks report blocksShutdown=false with non-blocking labels, including child-file diagnostics. Initial bounded history replay was still in progress during that snapshot; unidentified records remained conservative blockers.
+
+The Windows ZIP was extracted into an independent workspace. Its setup suites passed again, and its native public wrappers completed 18 clean-install, configuration-preserving upgrade, read-only inspection and uninstall checks with -NoStart -NoShortcuts. All 30 packaged PowerShell files parsed on Windows PowerShell 5.1. The build verifies archive CRCs and every archived file hash. The skill frontmatter and UTF-8-without-BOM checks passed.
+
+No real PC shutdown or reboot, Codex desktop restart, or acceptance test on another computer was performed.
+
+## Previous release: 1.1.1
 
 Validated on Windows with Windows PowerShell 5.1, Node.js 24.15.0 and the locally installed Codex CLI on 2026-10-21.
 

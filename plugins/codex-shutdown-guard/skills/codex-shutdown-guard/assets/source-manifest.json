@@ -1,7 +1,7 @@
 {
-  "version": "1.1.1",
+  "version": "1.1.2",
   "source": "native/",
-  "snapshotDate": "2026-10-21",
+  "snapshotDate": "2026-10-22",
   "notes": "Latest native monitor and UI source with portable installation and shared installation discovery. User configuration, runtime state, sessions, logs and credentials are excluded.",
   "files": [
     {
@@ -21,8 +21,8 @@
     },
     {
       "path": "CodexShutdownGuard.Core.psm1",
-      "sha256": "efbffee1c5e67de4591a7a788dda08aff61d6ed35238eb4ae4d3e463cf6401a2",
-      "bytes": 67018
+      "sha256": "ea3823a720a9ce401e3b32ed74369b045cab63321f591e99e3d1a3468999989c",
+      "bytes": 69312
     },
     {
       "path": "CodexShutdownGuard.Installation.psm1",
@@ -36,8 +36,8 @@
     },
     {
       "path": "CodexShutdownGuard.ps1",
-      "sha256": "ad45450edffe4c83da7ef9eb7c27935a5bc2bf23d303a9c467ab57ed6e7322cc",
-      "bytes": 90669
+      "sha256": "98f2541dc8c7c46bf64d07368d73b68d4d97c0383c41537f72895a5cf8e68083",
+      "bytes": 90988
     },
     {
       "path": "Install.ps1",
@@ -46,8 +46,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "984ea4acd2b3e0a612ac99b396056fe0203ed91bbf25f6e1602c81b67399a97b",
-      "bytes": 16889
+      "sha256": "8d0499206a36f599b04566712d3a7c01e2eacd5da36a4dc4dcbd5ab69c7ef52f",
+      "bytes": 17777
     },
     {
       "path": "Uninstall.ps1",
@@ -71,8 +71,8 @@
     },
     {
       "path": "tests/Test-CodexShutdownGuard.Guardian.ps1",
-      "sha256": "0770871ffc98c5e134e4b71671ede9d9fcc8de4320e88a1bf819f7b7c518137a",
-      "bytes": 15587
+      "sha256": "bce25ef0464ef3614050187f5b9fa43c1f3f1c8a9093091d0b77a2169856f57f",
+      "bytes": 16624
     },
     {
       "path": "tests/Test-CodexShutdownGuard.PortableInstallation.ps1",
@@ -96,18 +96,23 @@
     },
     {
       "path": "tests/Test-CodexShutdownGuard.StatusMetadata.ps1",
-      "sha256": "2b230256b29893acb6ceee74ace83e2e48288f7988b12fd95bac3dd53af4f53a",
-      "bytes": 4479
+      "sha256": "6bb1014e71ccd1b2eb31f3d9c1eb10dace636c4dd282ac0e915f3393dad50d8f",
+      "bytes": 6481
+    },
+    {
+      "path": "tests/Test-CodexShutdownGuard.SubagentPolicy.ps1",
+      "sha256": "e9e7180994fce3f75d18c2cd9888ddb0886d22701516a9b088c281ddcd682c73",
+      "bytes": 15862
     },
     {
       "path": "tests/Test-CodexShutdownGuard.TaskIdentity.ps1",
-      "sha256": "66787eeb7b349a955892d731ac5b8a875f43e14c9c66e46190ca4fdecd9e81f6",
-      "bytes": 17616
+      "sha256": "7696cde684d42bc8fd8796ddce924b91199a57aba45d7d466d46b19a79392508",
+      "bytes": 17833
     },
     {
       "path": "tests/Test-CodexShutdownGuard.TaskManagerLayout.ps1",
-      "sha256": "975145cf399470f39d5238d58998e6cc8a3a77479f88fb24e1534e4acf3b8926",
-      "bytes": 9772
+      "sha256": "42a49bf4950c845b1f00ff9b857ab6b815a9b9ec14b2893d7e2636888209077c",
+      "bytes": 10222
     },
     {
       "path": "tests/Test-CodexShutdownGuard.TrayToggle.ps1",

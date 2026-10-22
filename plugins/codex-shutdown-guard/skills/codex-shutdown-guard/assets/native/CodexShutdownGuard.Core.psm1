@@ -312,8 +312,21 @@ function Get-CodexGuardTaskTooltip {
         if ($value) { $parts.Add("$($field[1])：$value") }
     }
     $reason = [string](Get-CodexGuardJsonProperty $Entry 'Reason')
+    if (Test-CodexGuardChildTask $Entry) { $parts.Add('子代理和内部审批不阻止关机，等待状态由主任务决定。') }
     if ($reason) { $parts.Add($reason) }
     return $parts -join "`r`n"
+}
+
+function Test-CodexGuardChildTask {
+    param([object]$Entry)
+    # Exempt only identities recorded in session metadata. Unclassified files
+    # and global discovery errors remain conservative shutdown blockers.
+    return (
+        [string](Get-CodexGuardJsonProperty $Entry 'TaskType') -in @('Subagent', 'InternalReview') -or
+        -not [string]::IsNullOrWhiteSpace([string](Get-CodexGuardJsonProperty $Entry 'ParentThreadId')) -or
+        [string](Get-CodexGuardJsonProperty $Entry 'ThreadSource') -in @('subagent', 'guardian_review') -or
+        [string](Get-CodexGuardJsonProperty $Entry 'SessionSource') -eq 'subagent'
+    )
 }
 
 function Get-CodexGuardTaskStateLabel {
@@ -323,7 +336,7 @@ function Get-CodexGuardTaskStateLabel {
         elseif ($Entry.Kind -eq 'PendingReadActiveTurn') { '读取记录中' }
         elseif ($Entry.State -eq 'Unknown') { '异常' }
         else { '活动' }
-    return "$label · $(if ($Entry.IsIgnored) { '已无视' } else { '阻塞' })"
+    return "$label · $(if (Test-CodexGuardChildTask $Entry) { '不阻塞' } elseif ($Entry.IsIgnored) { '已无视' } else { '阻塞' })"
 }
 
 function Get-CodexGuardTaskManagerRows {
@@ -349,10 +362,13 @@ function Get-CodexGuardTaskManagerRows {
     foreach ($id in @($PendingChecks.Keys)) { if (-not $current.ContainsKey($id)) { [void]$PendingChecks.Remove($id) } }
     foreach ($unknown in @($Snapshot.AllUnknownItems | Where-Object { [string]::IsNullOrWhiteSpace([string]$_.TurnId) })) {
         $isPending = $unknown.Kind -eq 'PendingRead'
+        $isChild = Test-CodexGuardChildTask $unknown
         $rows.Add([pscustomobject]@{
-            TurnId=''; Title=if ($isPending) { '正在读取任务记录' } else { '无法归属到具体任务的异常' }
-            StateText=if ($isPending) { '读取中 · 阻塞' } else { '系统异常 · 不可无视' }
-            Cwd=''; Updated='未知'; Checked=$false; Tooltip=[string]$unknown.Reason; Tone='Error'
+            TurnId=''; Title=if ($isChild) { Get-CodexGuardTaskDisplayTitle $unknown $ThreadTitles } elseif ($isPending) { '正在读取任务记录' } else { '无法归属到具体任务的异常' }
+            StateText=if ($isChild) { if ($isPending) { '读取中 · 不阻塞' } else { '异常 · 不阻塞' } } elseif ($isPending) { '读取中 · 阻塞' } else { '系统异常 · 不可无视' }
+            ThreadId=[string](Get-CodexGuardJsonProperty $unknown 'ThreadId'); ParentThreadId=[string](Get-CodexGuardJsonProperty $unknown 'ParentThreadId')
+            TaskType=[string](Get-CodexGuardJsonProperty $unknown 'TaskType'); TaskTypeLabel=(Get-CodexGuardTaskTypeLabel $unknown)
+            Cwd=[string](Get-CodexGuardJsonProperty $unknown 'Cwd'); Updated='未知'; Checked=$false; Tooltip=if ($isChild) { Get-CodexGuardTaskTooltip $unknown $ThreadTitles } else { [string]$unknown.Reason }; Tone=if ($isChild) { 'Warning' } else { 'Error' }
         })
     }
     if ($rows.Count -eq 0) {
@@ -751,6 +767,11 @@ function Set-CodexGuardSessionIdentity {
     if ([guid]::TryParse($id, [ref]$validId)) { $FileState.ThreadId = $id }
     $source = Get-CodexGuardJsonProperty $Payload 'source'
     $subagent = Get-CodexGuardJsonProperty $source 'subagent'
+    $hasSubagentSource = (
+        ($subagent -is [string] -and -not [string]::IsNullOrWhiteSpace($subagent)) -or
+        ($subagent -is [Collections.IDictionary] -and $subagent.Count -gt 0) -or
+        ($subagent -is [pscustomobject] -and @($subagent.PSObject.Properties).Count -gt 0)
+    )
     $spawn = Get-CodexGuardJsonProperty $subagent 'thread_spawn'
     if ($null -eq $spawn) { $spawn = Get-CodexGuardJsonProperty $subagent 'spawn' }
     $other = [string](Get-CodexGuardJsonProperty $subagent 'other')
@@ -762,9 +783,9 @@ function Set-CodexGuardSessionIdentity {
     }
     $FileState.ThreadSource = ConvertTo-CodexGuardMetadataText (Get-CodexGuardJsonProperty $Payload 'thread_source')
     $FileState.Cwd = ConvertTo-CodexGuardMetadataText (Get-CodexGuardJsonProperty $Payload 'cwd') 1024
-    $FileState.SessionSource = if ($source -is [string]) { ConvertTo-CodexGuardMetadataText $source } elseif ($null -ne $subagent) { 'subagent' } else { '' }
+    $FileState.SessionSource = if ($source -is [string]) { ConvertTo-CodexGuardMetadataText $source } elseif ($hasSubagentSource) { 'subagent' } else { '' }
     if ($FileState.IsGuardianSession -or $FileState.ThreadSource -eq 'guardian_review' -or ($subagent -is [string] -and $subagent -eq 'review')) { $FileState.TaskType = 'InternalReview' }
-    elseif ($null -ne $subagent -or $FileState.ThreadSource -eq 'subagent' -or $FileState.ParentThreadId) { $FileState.TaskType = 'Subagent' }
+    elseif ($hasSubagentSource -or $FileState.ThreadSource -eq 'subagent' -or $FileState.ParentThreadId) { $FileState.TaskType = 'Subagent' }
     elseif ($FileState.ThreadSource -eq 'user' -or $FileState.SessionSource -in @('cli','vscode','app','desktop')) { $FileState.TaskType = 'MainTask' }
     $historyStart = Get-CodexGuardJsonProperty $Payload 'subagent_history_start_ordinal'
     $historyOrdinal = [long]0
@@ -1188,7 +1209,7 @@ function Get-CodexGuardSnapshot {
             ThreadSource=$identity.ThreadSource; SessionSource=$identity.SessionSource
             Cwd = [string]$turn.Cwd; Path = $turn.FilePath; StartedAtUtc = $turn.StartedAtUtc
             LastUpdatedAtUtc = $lastWrite; ActivityAgeSeconds = [int][Math]::Floor($age)
-            Reason = $reason; IsIgnored = $ignored; BlocksShutdown = (-not $ignored)
+            Reason = $reason; IsIgnored = $ignored; BlocksShutdown = (-not $ignored -and -not (Test-CodexGuardChildTask $identity))
         }
         $taskEntries.Add($entry)
         if ($state -eq 'Unknown') {
@@ -1198,7 +1219,7 @@ function Get-CodexGuardSnapshot {
                 AgentName=$identity.AgentName; AgentRole=$identity.AgentRole; AgentPath=$identity.AgentPath
                 ThreadSource=$identity.ThreadSource; SessionSource=$identity.SessionSource
                 Cwd=$entry.Cwd; Path=$entry.Path; StartedAtUtc=$entry.StartedAtUtc
-                LastUpdatedAtUtc=$lastWrite; Reason=$reason; IsIgnored=$ignored
+                LastUpdatedAtUtc=$lastWrite; Reason=$reason; IsIgnored=$ignored; BlocksShutdown=$entry.BlocksShutdown
             })
         }
     }
@@ -1217,7 +1238,7 @@ function Get-CodexGuardSnapshot {
             AgentName=$identity.AgentName; AgentRole=$identity.AgentRole; AgentPath=$identity.AgentPath
             ThreadSource=$identity.ThreadSource; SessionSource=$identity.SessionSource
             Cwd=[string]$unknown.Cwd; Path=$unknown.FilePath; StartedAtUtc=$unknown.ObservedAtUtc
-            LastUpdatedAtUtc=$lastWrite; Reason=$unknown.Reason; IsIgnored=$ignored
+            LastUpdatedAtUtc=$lastWrite; Reason=$unknown.Reason; IsIgnored=$ignored; BlocksShutdown=(-not $ignored -and -not (Test-CodexGuardChildTask $identity))
         }
         $allUnknownItems.Add($item)
         $taskEntries.Add([pscustomobject]@{
@@ -1227,7 +1248,7 @@ function Get-CodexGuardSnapshot {
             ThreadSource=$identity.ThreadSource; SessionSource=$identity.SessionSource
             Cwd=$item.Cwd; Path=$item.Path; StartedAtUtc=$item.StartedAtUtc
             LastUpdatedAtUtc=$lastWrite; ActivityAgeSeconds=$null; Reason=$item.Reason
-            IsIgnored=$ignored; BlocksShutdown=(-not $ignored)
+            IsIgnored=$ignored; BlocksShutdown=$item.BlocksShutdown
         })
         $coveredProblems[$unknown.FilePath] = $true
     }
@@ -1241,18 +1262,18 @@ function Get-CodexGuardSnapshot {
             ParentThreadId=$identity.ParentThreadId; TaskType=$identity.TaskType
             AgentName=$identity.AgentName; AgentRole=$identity.AgentRole; AgentPath=$identity.AgentPath
             ThreadSource=$identity.ThreadSource; SessionSource=$identity.SessionSource
-            Reason=$pathProblems[$path].Reason; IsIgnored=$false
+            Reason=$pathProblems[$path].Reason; IsIgnored=$false; BlocksShutdown=(-not (Test-CodexGuardChildTask $identity))
         })
     }
     foreach ($key in $Tracker.GlobalErrors.Keys) {
         $allUnknownItems.Add([pscustomobject]@{
             Kind='GlobalError'; Id=$key; TurnId=''; ThreadId=''; Cwd=''; Path=$Tracker.SessionsRoot
             ParentThreadId=''; TaskType='Unknown'; AgentName=''; AgentRole=''; AgentPath=''; ThreadSource=''; SessionSource=''
-            StartedAtUtc=$null; LastUpdatedAtUtc=$null; Reason=[string]$Tracker.GlobalErrors[$key]; IsIgnored=$false
+            StartedAtUtc=$null; LastUpdatedAtUtc=$null; Reason=[string]$Tracker.GlobalErrors[$key]; IsIgnored=$false; BlocksShutdown=$true
         })
     }
-    $activeTurns = @($recentTurns.ToArray() | Where-Object { -not $ignoredLookup.ContainsKey($_.TurnId) })
-    $unknownItems = @($allUnknownItems.ToArray() | Where-Object { -not $_.IsIgnored })
+    $activeTurns = @($recentTurns.ToArray() | Where-Object { -not $ignoredLookup.ContainsKey($_.TurnId) -and -not (Test-CodexGuardChildTask (Get-CodexGuardFileIdentity -Tracker $Tracker -Path $_.FilePath)) })
+    $unknownItems = @($allUnknownItems.ToArray() | Where-Object { $_.BlocksShutdown })
     $ignoredEntries = @($taskEntries.ToArray() | Where-Object { $_.IsIgnored })
     return [pscustomobject]@{
         CapturedAtUtc=$now; BaselineUtc=$Tracker.BaselineUtc
@@ -1260,6 +1281,7 @@ function Get-CodexGuardSnapshot {
         AllActiveTurns=$allActiveTurns; UnknownCount=$unknownItems.Count; UnknownItems=$unknownItems
         ObservedUnknownCount=$allUnknownItems.Count; AllUnknownItems=$allUnknownItems.ToArray()
         TaskCount=$taskEntries.Count; TaskEntries=$taskEntries.ToArray(); IgnoredCount=$ignoredEntries.Count
+        ObservedShutdownTaskCount=@($taskEntries.ToArray() | Where-Object { -not (Test-CodexGuardChildTask $_) }).Count
         IgnoredTurnIds=@($ignoredEntries | ForEach-Object { $_.TurnId })
         TrackedFileCount=$Tracker.Files.Count; TrackedTurnCount=$Tracker.Turns.Count
         HasPendingReads=(@($Tracker.Files.Values | Where-Object { $_.Position -lt $_.LastLength -and $_.Partial -ne 'pending' }).Count -gt 0)

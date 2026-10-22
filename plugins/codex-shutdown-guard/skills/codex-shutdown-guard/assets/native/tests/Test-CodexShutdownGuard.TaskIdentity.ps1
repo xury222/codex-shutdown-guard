@@ -111,7 +111,8 @@ try {
         Update-CodexGuardTracker -Tracker $historyCase.Tracker
         Check $childId $inherited.ThreadId 'embedded parent metadata cannot replace owning child metadata'
         Check 2 $inherited.InheritedRecordsRemaining 'history record ordinal continues across file reads'
-        Check $true ((Snapshot $historyCase).UnknownCount -gt 0) 'EOF inside inherited history remains blocking unknown'
+        Check 0 (Snapshot $historyCase).UnknownCount 'known child history boundary cannot block the parent'
+        Check $true ((Snapshot $historyCase).ObservedUnknownCount -gt 0) 'incomplete child history remains visible for diagnosis'
         [IO.File]::AppendAllText($inherited.Path, ((Event 'task_complete' 'parent-current') + "`n" + '{"type":"response_item","payload":{"content":"PRIVATE_HISTORY"}}' + "`n" + '{"type":"thread_settings_applied","timestamp":"' + $now.ToString('o') + '"}' + "`n" + (Event 'task_started' 'child-own') + "`n"), $utf8)
         Update-CodexGuardTracker -Tracker $historyCase.Tracker
         Check 0 $inherited.InheritedRecordsRemaining 'own records begin at zero-based history boundary'
@@ -171,7 +172,8 @@ try {
         Update-CodexGuardTracker -Tracker $badCase.Tracker
         Check 0 $bad.InheritedRecordsRemaining 'malformed inherited record still occupies its record ordinal'
         Check $true $badCase.Tracker.Turns.ContainsKey('own-after-malformed') 'malformed history does not shift own lifecycle boundary'
-        Check $true ((Snapshot $badCase).UnknownCount -gt 0) 'malformed history remains fail-closed despite a visible own task'
+        Check 0 (Snapshot $badCase).UnknownCount 'malformed known child history cannot block shutdown'
+        Check $true ((Snapshot $badCase).ObservedUnknownCount -gt 0) 'malformed child history remains visible for diagnosis'
         Check $childId (Snapshot $badCase).TaskEntries[0].ThreadId 'malformed inherited parent metadata cannot replace identity'
 
         $discoveryCase = New-Case 'new-file-old-mtime'

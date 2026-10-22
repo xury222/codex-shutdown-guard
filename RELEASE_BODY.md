@@ -1,26 +1,25 @@
-## Codex 关机守卫 1.1.1
+## Codex 关机守卫 1.1.2
 
-完整解压 Windows 包，双击根目录的 `Install.cmd`，在窗口中点击“安装并启动”，即可安装原生守卫，无需手动输入命令。
+主任务完成后，残留的子代理和内部审批不再单独阻止关机。它们仍保留在任务列表中，显示名称、父任务和异常提示，状态注明“不阻塞”。
 
 ### 下载
 
-- `codex-shutdown-guard-windows-1.1.1.zip`：完整 Windows 包，包含双击安装及卸载窗口、原生源码、聊天插件和本地 marketplace。普通安装请选择此文件。
-- `codex-shutdown-guard-plugin-1.1.1.zip`：单插件目录及随包原生源码，不含根目录的双击安装窗口。
+- `codex-shutdown-guard-windows-1.1.2.zip`：完整 Windows 包，包含双击安装及卸载窗口、原生源码、聊天插件和本地 marketplace。普通安装请选择此文件。
+- `codex-shutdown-guard-plugin-1.1.2.zip`：单插件目录及随包原生源码，不含根目录的双击安装窗口。
 - `SHA256SUMS.txt`：两份 ZIP 的 SHA-256 校验清单。
 
-原生守卫使用系统 Windows PowerShell 5.1。新安装默认位于 `%LOCALAPPDATA%\Programs\CodexShutdownGuard`，兼容已有有效注册或带产品标记的旧安装。
+完整解压 Windows 包，双击根目录的 `Install.cmd`，在窗口中点击“安装并启动”。原生守卫使用系统 Windows PowerShell 5.1，无需手动输入命令。
 
-### 变化
+### 等待规则
 
-- 新增中文安装窗口、进度及错误结果显示，支持双击安装和更新原生守卫。
-- 聊天插件改为窗口中的可选项，自动检查 Node.js、Codex CLI 和 Git；缺少依赖时提供官网下载入口，不自动安装第三方软件。
-- 新增 `Uninstall.cmd` 卸载窗口，保留状态目录和额外文件。
-- 聊天插件使用固定 GitHub 版本 `v1.1.1`，不会自动重启 Codex 或启用已有停用插件。安装后关闭并重新打开 Codex，以刷新工具。
+已识别的子代理即使仍活动、疑似失联或日志读取异常，也不会单独增加阻塞数量。主任务异常、来源未识别的记录及全局扫描错误继续暂停关机。只有子代理、从未观察到主任务时，不会启动倒计时。
 
-安装不会开启自动关机。更新会保留已有配置；已布防时须先取消自动关机，再重新安装。聊天插件失败时，窗口会说明原生守卫是否已安装。
+主任务完成后仍需连续 3 次空闲确认，并经过可撤销的关机缓冲。新主任务会撤销倒计时。
+
+安装不会开启自动关机。更新会保留已有配置；已布防时须先取消自动关机，再重新安装。可选聊天插件使用固定 GitHub 版本 `v1.1.2`。
 
 ### 验证范围
 
-本版新增安装入口验证，详见 [验证记录](https://github.com/xury222/codex-shutdown-guard/blob/v1.1.1/VALIDATION.md)。1.1.0 的 932 项隔离检查保留为上一版记录；本版未执行真实关机、重启或另一台电脑的验收。
+本轮检查见 [验证记录](https://github.com/xury222/codex-shutdown-guard/blob/v1.1.2/VALIDATION.md)。本版未执行真实关机、重启或另一台电脑的验收。
 
-完整步骤见 [安装说明](https://github.com/xury222/codex-shutdown-guard/blob/v1.1.1/docs/INSTALL.md)。
+完整步骤见 [安装说明](https://github.com/xury222/codex-shutdown-guard/blob/v1.1.2/docs/INSTALL.md)。

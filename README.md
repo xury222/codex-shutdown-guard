@@ -2,16 +2,16 @@
 
 Windows 本地 Codex 任务监控、账户额度面板与任务完成后关机工具。原生托盘程序负责监控和关机判断，聊天插件提供状态查询与控制入口。
 
-- 查看主任务、子代理及所属父任务，管理本轮需要等待或无视的任务。
+- 由主任务决定是否等待；子代理和内部审批保留在列表中，不单独阻止关机。
 - 显示账户额度窗口、剩余额度及重置时间。
-- 明确开启自动关机后，等待任务完成并进入可撤销的倒计时。
+- 明确开启自动关机后，等待本机主任务完成并进入可撤销的倒计时。
 - 使用当前系统代理启动 Codex，并分别设置守卫启动时启动 Codex、启动 Codex 时启动守卫。
 
 功能只覆盖本机 Codex 桌面任务。项目通过 GitHub 分发，尚未上架 OpenAI 官方插件目录。
 
 ## 双击安装
 
-1. 在 [1.1.1 Release](https://github.com/xury222/codex-shutdown-guard/releases/tag/v1.1.1) 下载 `codex-shutdown-guard-windows-1.1.1.zip`，右键选择“全部解压”。
+1. 在 [1.1.2 Release](https://github.com/xury222/codex-shutdown-guard/releases/tag/v1.1.2) 下载 `codex-shutdown-guard-windows-1.1.2.zip`，右键选择“全部解压”。
 2. 打开解压后的文件夹，双击根目录的 `Install.cmd`，在窗口中点击“安装并启动”。
 
 完成后，可从桌面快捷方式或系统托盘打开守卫。
@@ -28,7 +28,7 @@ Windows 本地 Codex 任务监控、账户额度面板与任务完成后关机�
 
 聊天插件需要 Node.js 18 或更新版本、支持插件命令的 Codex CLI，以及 Git。安装窗口会检测这些程序，也会寻找 Codex 桌面应用自带的 CLI；缺少依赖时，聊天插件选项不可选，原生守卫仍可安装。窗口提供官网下载入口，不会自动下载或安装依赖。补齐后关闭并重新打开安装窗口即可重新检测；Node.js 建议选择官网 LTS 版本。
 
-通过窗口安装的聊天插件使用 GitHub 固定版本 `v1.1.1`，安装后无需保留下载的解压目录。完成后关闭并重新打开 Codex，以刷新插件工具；安装器不会自动重启 Codex。已有停用的聊天插件不会被安装器自动启用。
+通过窗口安装的聊天插件使用 GitHub 固定版本 `v1.1.2`，安装后无需保留下载的解压目录。完成后关闭并重新打开 Codex，以刷新插件工具；安装器不会自动重启 Codex。已有停用的聊天插件不会被安装器自动启用。
 
 可以请求“查看关机守卫状态和账户额度”“显示关机守卫面板”“取消自动关机”“启动 Codex 时自动启动守卫”。完整的 9 个工具见 [插件说明](plugins/codex-shutdown-guard/README.md)。启用聊天插件本身不会安装原生程序或开启自动关机。
 
@@ -36,6 +36,6 @@ Windows 本地 Codex 任务监控、账户额度面板与任务完成后关机�
 
 双击完整 Windows 包根目录的 `Uninstall.cmd`，在窗口中点击“卸载守卫”。卸载会移除属于本安装的程序文件及快捷方式，保留状态目录和额外文件。聊天插件可在 Codex 插件管理中单独移除。
 
-[版本说明](RELEASE_NOTES.md) 保留 1.1.0 的修复记录及 1.1.1 的双击安装变化；本版安装入口的检查范围见 [验证记录](VALIDATION.md)。从源码打包时，在仓库根目录运行 `python scripts/build-release.py`，产物写入 `dist`。源码清单为 `SOURCE_SHA256SUMS.txt`，Release 附件 `SHA256SUMS.txt` 用于校验两份 ZIP。
+[版本说明](RELEASE_NOTES.md) 记录 1.1.2 的子代理等待规则及历史版本变化；本轮检查范围见 [验证记录](VALIDATION.md)。从源码打包时，在仓库根目录运行 `python scripts/build-release.py`，产物写入 `dist`。源码清单为 `SOURCE_SHA256SUMS.txt`，Release 附件 `SHA256SUMS.txt` 用于校验两份 ZIP。
 
 问题反馈请提交到 [Issues](https://github.com/xury222/codex-shutdown-guard/issues)，并提供版本、Windows 环境、操作步骤及必要的已脱敏日志。公开附件不要包含账户凭据、私人会话或用户配置。

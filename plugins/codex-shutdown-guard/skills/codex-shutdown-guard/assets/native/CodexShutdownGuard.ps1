@@ -539,7 +539,7 @@ function New-StatusPayload {
     )
 
     return [ordered]@{
-        schemaVersion = 7
+        schemaVersion = 8
         updatedAtUtc = $now.ToString('o')
         running = $Running
         armed = [bool]$Runtime.Armed
@@ -558,6 +558,7 @@ function New-StatusPayload {
                 Sort-Object -Unique
         )
         taskCount = [int]$Snapshot.TaskCount
+        observedShutdownTaskCount = [int]$Snapshot.ObservedShutdownTaskCount
         blockingTaskCount = [int]($Snapshot.ActiveCount + $Snapshot.UnknownCount)
         ignoredCount = [int]$Snapshot.IgnoredCount
         readingHistory = ($null -ne $Snapshot.PSObject.Properties['HasPendingReads'] -and [bool]$Snapshot.HasPendingReads)
@@ -568,11 +569,11 @@ function New-StatusPayload {
         observedUnknownCount = [int]$Snapshot.ObservedUnknownCount
         unknownItems = @(
             $Snapshot.UnknownItems |
-                Select-Object Kind, Id, TurnId, ThreadId, ParentThreadId, TaskType, AgentName, AgentRole, AgentPath, Cwd, Path, Reason, IsIgnored
+                Select-Object Kind, Id, TurnId, ThreadId, ParentThreadId, TaskType, AgentName, AgentRole, AgentPath, Cwd, Path, Reason, IsIgnored, BlocksShutdown
         )
         allUnknownItems = @(
             $Snapshot.AllUnknownItems |
-                Select-Object Kind, Id, TurnId, ThreadId, ParentThreadId, TaskType, AgentName, AgentRole, AgentPath, Cwd, Path, Reason, IsIgnored
+                Select-Object Kind, Id, TurnId, ThreadId, ParentThreadId, TaskType, AgentName, AgentRole, AgentPath, Cwd, Path, Reason, IsIgnored, BlocksShutdown
         )
         seenActiveSinceArm = [bool]$Runtime.SeenActive
         stableIdleSamples = [int]$Runtime.StableIdleSamples
@@ -1111,7 +1112,7 @@ function Update-CodexTaskManagerView {
         $agentCount = @($snapshot.TaskEntries | Where-Object { $null -ne $_.PSObject.Properties['TaskType'] -and $_.TaskType -eq 'Subagent' }).Count
         $reviewCount = @($snapshot.TaskEntries | Where-Object { $null -ne $_.PSObject.Properties['TaskType'] -and $_.TaskType -eq 'InternalReview' }).Count
         if (($mainCount + $agentCount + $reviewCount) -gt 0) {
-            $view.Summary.Text += "`r`n主任务 $mainCount  ·  子代理 $agentCount  ·  内部审批 $reviewCount"
+            $view.Summary.Text += "`r`n主任务 $mainCount  ·  子代理 $agentCount  ·  内部审批 $reviewCount（不阻塞）"
         }
         if ($null -ne $snapshot.PSObject.Properties['CapturedAtUtc']) {
             $view.Summary.Text += '  ·  扫描 ' + ([datetime]$snapshot.CapturedAtUtc).ToLocalTime().ToString('HH:mm:ss')
@@ -1168,7 +1169,7 @@ function Show-TaskManagerDialog {
     $instruction.AutoSize = $true
     $instruction.Dock = [Windows.Forms.DockStyle]::Fill
     $instruction.Margin = New-Object Windows.Forms.Padding(0, 0, 0, 8)
-    $instruction.Text = '勾选表示“无视”：该回合将不再阻止关机。只应无视已失联或无需等待的任务；同一任务的新回合仍会重新阻止关机。'
+    $instruction.Text = '子代理和内部审批不阻止关机。勾选表示“无视”该回合；只应无视已失联或无需等待的主任务，主任务的新回合会重新阻止关机。'
     $instruction.ForeColor = [Drawing.Color]::FromArgb(70, 75, 84)
     $layout.Controls.Add($instruction, 0, 0)
 
@@ -1803,17 +1804,17 @@ function Invoke-GuardPoll {
             Set-CodexGuardArmed `
                 -Runtime $script:Runtime `
                 -CurrentActiveCount $script:LastSnapshot.ActiveCount `
-                -CurrentObservedTaskCount $script:LastSnapshot.TaskCount
+                -CurrentObservedTaskCount $script:LastSnapshot.ObservedShutdownTaskCount
             $script:PendingArm = $false
-            Write-GuardLog -Message "Guard armed; blocking active turns: $($script:LastSnapshot.ActiveCount); observed task entries: $($script:LastSnapshot.TaskCount); ignored: $($script:LastSnapshot.IgnoredCount)."
+            Write-GuardLog -Message "Guard armed; blocking active turns: $($script:LastSnapshot.ActiveCount); observed shutdown tasks: $($script:LastSnapshot.ObservedShutdownTaskCount); ignored: $($script:LastSnapshot.IgnoredCount)."
             if ($script:LastSnapshot.ActiveCount -gt 0) {
                 Show-GuardBalloon -Title 'Codex 自动关机已布防' -Text ("正在等待 {0} 个活动回合完成。" -f $script:LastSnapshot.ActiveCount)
             }
-            elseif ($script:LastSnapshot.IgnoredCount -gt 0) {
+            elseif ($script:LastSnapshot.ObservedShutdownTaskCount -gt 0 -and $script:LastSnapshot.UnknownCount -eq 0) {
                 Show-GuardBalloon -Title 'Codex 自动关机已布防' -Text ("当前任务均已设为无视；完成空闲确认后继续关机流程。")
             }
             else {
-                Show-GuardBalloon -Title 'Codex 自动关机已布防' -Text '当前没有运行任务；将等待至少一个任务开始并完成后再关机。'
+                Show-GuardBalloon -Title 'Codex 自动关机已布防' -Text '当前没有运行的主任务；将等待至少一个主任务开始并完成后再关机。'
             }
         }
 
@@ -1881,6 +1882,7 @@ function Invoke-OneShotStatus {
         ObservedUnknownCount = 0
         AllUnknownItems = @()
         TaskCount = 0
+        ObservedShutdownTaskCount = 0
         TaskEntries = @()
         IgnoredCount = 0
         IgnoredTurnIds = @()
@@ -2049,6 +2051,7 @@ try {
         ObservedUnknownCount = 0
         AllUnknownItems = @()
         TaskCount = 0
+        ObservedShutdownTaskCount = 0
         TaskEntries = @()
         IgnoredCount = 0
         IgnoredTurnIds = @()

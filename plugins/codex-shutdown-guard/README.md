@@ -1,18 +1,18 @@
-# Codex 关机守卫插件 1.1.1
+# Codex 关机守卫插件 1.1.2
 
 插件为 Windows 原生 CodexShutdownGuard 提供聊天控制入口，沿用原托盘、任务监控与额度面板。
 
 ## 安装
 
-普通用户请下载 [完整 Windows 包](https://github.com/xury222/codex-shutdown-guard/releases/tag/v1.1.1)，完整解压后双击根目录的 `Install.cmd`，在窗口中点击“安装并启动”。勾选“同时安装 / 更新 Codex 聊天插件（可选，需联网）”后，窗口会在后台执行插件安装，无需手动输入命令。
+普通用户请下载 [完整 Windows 包](https://github.com/xury222/codex-shutdown-guard/releases/tag/v1.1.2)，完整解压后双击根目录的 `Install.cmd`，在窗口中点击“安装并启动”。勾选“同时安装 / 更新 Codex 聊天插件（可选，需联网）”后，窗口会在后台执行插件安装，无需手动输入命令。
 
 原生守卫使用系统 Windows PowerShell 5.1，不需要 Node.js、Git 或 Codex CLI。聊天插件另需 Node.js 18 或更新版本、支持插件命令的 Codex CLI，以及 Git；窗口会检测依赖，包括 Codex 桌面应用自带的 CLI。缺少依赖时，可通过窗口链接前往官网下载，补齐后重新打开安装窗口。安装器不会自动下载或安装依赖，Node.js 建议选择官网 LTS 版本。
 
-通过窗口安装的聊天插件使用固定 GitHub 版本 `v1.1.1`，无需保留解压目录。完成后关闭并重新打开 Codex，以刷新工具。安装器不会重启 Codex，也不会自动启用已停用的插件。
+通过窗口安装的聊天插件使用固定 GitHub 版本 `v1.1.2`，无需保留解压目录。完成后关闭并重新打开 Codex，以刷新工具。安装器不会重启 Codex，也不会自动启用已停用的插件。
 
 新安装默认位于 `%LOCALAPPDATA%\Programs\CodexShutdownGuard`，兼容已有有效注册及带产品标记的旧安装。固定注册文件 `%LOCALAPPDATA%\CodexShutdownGuard\installation.json` 记录 `installRoot` 和 `stateRoot`。更新会保留配置；守卫已布防时须先取消自动关机再安装。
 
-守卫启动后默认未布防。“启动 Codex 时自动启动守卫”首次安装默认关闭；启用聊天插件本身不会安装原生程序或开启自动关机。完整步骤见 [仓库安装说明](https://github.com/xury222/codex-shutdown-guard/blob/v1.1.1/docs/INSTALL.md)。
+守卫启动后默认未布防。“启动 Codex 时自动启动守卫”首次安装默认关闭；启用聊天插件本身不会安装原生程序或开启自动关机。完整步骤见 [仓库安装说明](https://github.com/xury222/codex-shutdown-guard/blob/v1.1.2/docs/INSTALL.md)。
 
 ## 聊天控制
 
@@ -30,7 +30,7 @@
 
 示例：“查看关机守卫状态和账户额度”“本轮全部任务完成后关机”“取消自动关机”“启动 Codex 时自动启动守卫”。两个启动选项相互独立，都不会开启自动关机。
 
-原生面板提供任务无视与恢复、主任务和子代理归属、完整任务信息、额度窗口与重置时间，以及显示、隐藏、拖动和位置保存。托盘自动关机操作为一个勾选项，取消勾选即取消自动关机。
+原生面板提供任务无视与恢复、主任务和子代理归属、完整任务信息、额度窗口与重置时间，以及显示、隐藏、拖动和位置保存。主任务决定是否等待，子代理和内部审批保留在列表中，不单独阻止关机；来源未识别或全局扫描错误仍会暂停关机。托盘自动关机操作为一个勾选项，取消勾选即取消自动关机。
 
 状态查询包含快照时间和新鲜度。控制请求可能排队，需再次查询状态确认执行结果。自动关机仍由原生守卫判断，等待、倒计时和撤销规则见 [原生程序说明](skills/codex-shutdown-guard/assets/native/README.md)。
 
@@ -55,7 +55,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1
 聊天插件可从固定 GitHub 版本安装：
 
 ```powershell
-codex plugin marketplace add xury222/codex-shutdown-guard --ref v1.1.1
+codex plugin marketplace add xury222/codex-shutdown-guard --ref v1.1.2
 codex plugin add codex-shutdown-guard@codex-shutdown-guard-local
 ```
 

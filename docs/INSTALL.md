@@ -2,9 +2,9 @@
 
 ## 下载完整 Windows 包
 
-在 [1.1.1 Release](https://github.com/xury222/codex-shutdown-guard/releases/tag/v1.1.1) 下载 `codex-shutdown-guard-windows-1.1.1.zip`，右键选择“全部解压”。请先完整解压，勿只从 ZIP 中打开一个 CMD 文件。
+在 [1.1.2 Release](https://github.com/xury222/codex-shutdown-guard/releases/tag/v1.1.2) 下载 `codex-shutdown-guard-windows-1.1.2.zip`，右键选择“全部解压”。请先完整解压，勿只从 ZIP 中打开一个 CMD 文件。
 
-Windows 包包含双击安装窗口、原生守卫、聊天插件和本地 marketplace。单独的 `codex-shutdown-guard-plugin-1.1.1.zip` 只包含插件目录及随包原生源码，没有根目录的双击安装窗口。完整克隆或下载仓库源码后，也可运行根目录的安装入口。
+Windows 包包含双击安装窗口、原生守卫、聊天插件和本地 marketplace。单独的 `codex-shutdown-guard-plugin-1.1.2.zip` 只包含插件目录及随包原生源码，没有根目录的双击安装窗口。完整克隆或下载仓库源码后，也可运行根目录的安装入口。
 
 ## 安装守卫
 
@@ -16,9 +16,15 @@ Windows 包包含双击安装窗口、原生守卫、聊天插件和本地 marke
 
 安装不会开启自动关机。需要使用时，在系统托盘中勾选“任务完成后自动关机”；取消勾选即可取消自动关机及倒计时。已有守卫若开启了自动关机，须先取消，等待状态更新后再安装；安装器不会替你取消或重启已布防的守卫。
 
+## 自动关机等待规则
+
+守卫等待本机尚未完成的主任务。子代理和内部审批保留名称、父任务和异常提示，但不会单独阻止关机；主任务完成后，无需等待残留子代理。只有子代理、从未观察到主任务时，不会启动关机倒计时。
+
+来源尚未识别的任务、主任务状态异常及全局扫描错误仍会暂停关机。主任务需要连续 3 次空闲确认，再进入可撤销的倒计时。
+
 ## 同时安装聊天插件
 
-在安装窗口中勾选“同时安装 / 更新 Codex 聊天插件（可选，需联网）”，再开始安装。窗口会执行固定 GitHub 版本 `v1.1.1` 的插件安装，无需手动输入命令。
+在安装窗口中勾选“同时安装 / 更新 Codex 聊天插件（可选，需联网）”，再开始安装。窗口会执行固定 GitHub 版本 `v1.1.2` 的插件安装，无需手动输入命令。
 
 聊天插件需要 Node.js 18 或更新版本、支持 `codex plugin` 命令的 Codex CLI，以及 Git。安装窗口会检测 PATH 和常见安装位置，并寻找 Codex 桌面应用自带的 CLI。缺少依赖时，聊天插件选项不可选。原生守卫仍可安装。
 
@@ -49,7 +55,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1 -NoStart
 从 GitHub 手动安装聊天插件的命令为：
 
 ```powershell
-codex plugin marketplace add xury222/codex-shutdown-guard --ref v1.1.1
+codex plugin marketplace add xury222/codex-shutdown-guard --ref v1.1.2
 codex plugin add codex-shutdown-guard@codex-shutdown-guard-local
 ```
 
@@ -58,7 +64,7 @@ codex plugin add codex-shutdown-guard@codex-shutdown-guard-local
 校验下载文件时，将 Release 的 `SHA256SUMS.txt` 与 ZIP 放在同一目录，运行：
 
 ```powershell
-Get-FileHash .\codex-shutdown-guard-windows-1.1.1.zip -Algorithm SHA256
+Get-FileHash .\codex-shutdown-guard-windows-1.1.2.zip -Algorithm SHA256
 Get-Content .\SHA256SUMS.txt
 ```
 

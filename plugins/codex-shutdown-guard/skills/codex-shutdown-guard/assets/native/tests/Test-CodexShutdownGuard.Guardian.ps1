@@ -43,13 +43,14 @@ try {
         function Send($case, [string]$line) { Register-CodexGuardLine -Tracker $case.Tracker -FileState $case.File -Line $line }
         function Save-Lines($case, [string[]]$lines, [string]$tail = '') { [IO.File]::WriteAllText($case.Path, (($lines -join "`n") + "`n" + $tail), $utf8) }
         function Snapshot($case) { return Get-CodexGuardSnapshot -Tracker $case.Tracker -NowUtc $now }
-        function Check-Protected($case, [string]$name) {
+        function Check-NonBlockingInternal($case, [string]$name) {
             $snapshot = Snapshot $case
-            Check $true ($snapshot.UnknownCount -gt 0) "$name remains a blocking unknown"
+            Check 0 $snapshot.UnknownCount "$name cannot block shutdown"
+            Check $true ($snapshot.ObservedUnknownCount -gt 0) "$name retains diagnostic uncertainty"
             $runtime = New-CodexGuardRuntime -DryRun
             Set-CodexGuardArmed -Runtime $runtime -CurrentObservedTaskCount 1
             $actions = @(Update-CodexGuardRuntime -Runtime $runtime -Snapshot $snapshot -AppAvailable $true -NowUtc $now -TotalGraceSeconds 180 -NativeShutdownSeconds 30)
-            Check 'PausedUnknownState' $runtime.Phase "$name pauses automatic shutdown"
+            Check 'ConfirmingIdle' $runtime.Phase "$name permits stable idle confirmation"
             Check $false ('ScheduleShutdown' -in $actions) "$name emits no shutdown schedule"
         }
 
@@ -92,11 +93,13 @@ try {
         )
         foreach ($sourceCase in $sourceCases) {
             $case = New-Case $sourceCase.Name
-            Send $case (Meta-Line $sourceCase.Source)
+            Send $case (Meta-Line $sourceCase.Source '')
             Send $case (Context-Line 'auto-compact-0')
             $snapshot = Snapshot $case
             Check 1 $snapshot.TaskCount "$($sourceCase.Name) automatic-looking context is still tracked"
-            Check $true ($snapshot.UnknownCount -gt 0) "$($sourceCase.Name) source cannot gain guardian exemption"
+            $isChild = $sourceCase.Source -is [System.Collections.IDictionary] -and $sourceCase.Source.Contains('subagent')
+            Check 1 $snapshot.ObservedUnknownCount "$($sourceCase.Name) has no synthetic-context suppression"
+            Check $(if ($isChild) { 0 } else { 1 }) $snapshot.UnknownCount "$($sourceCase.Name) blocking follows recorded source ownership"
         }
         $noMeta = New-Case 'missing-meta'
         Send $noMeta (Context-Line 'auto-compact-0')
@@ -105,10 +108,13 @@ try {
 
         foreach ($sourceCase in @($sourceCases | Where-Object { $_.Name -in @('desktop','cli','spawn','review','other-review') })) {
             $case = New-Case ($sourceCase.Name + '-active')
-            Send $case (Meta-Line $sourceCase.Source)
+            Send $case (Meta-Line $sourceCase.Source '')
             Send $case (Task-Line 'task_started' 'real-active-turn')
             Send $case (Context-Line 'real-active-turn')
-            Check 1 (Snapshot $case).ActiveCount "$($sourceCase.Name) real task remains active and blocking"
+            $snapshot = Snapshot $case
+            $isChild = $sourceCase.Source -is [System.Collections.IDictionary] -and $sourceCase.Source.Contains('subagent')
+            Check 1 $snapshot.ObservedActiveCount "$($sourceCase.Name) real task remains visible"
+            Check $(if ($isChild) { 0 } else { 1 }) $snapshot.ActiveCount "$($sourceCase.Name) blocking follows recorded source ownership"
             Check 0 (Snapshot $case).UnknownCount "$($sourceCase.Name) started task remains recognized"
         }
 
@@ -116,20 +122,22 @@ try {
             $case = New-Case ('near-id-' + $script:GuardianPassed)
             Send $case $metaLine
             Send $case (Context-Line $turnId)
-            Check 1 (Snapshot $case).UnknownCount "guardian context [$turnId] is not an exact automatic compact ID"
+            Check 1 (Snapshot $case).ObservedUnknownCount "guardian context [$turnId] is not an exact automatic compact ID"
+            Check 0 (Snapshot $case).UnknownCount "known internal context [$turnId] cannot block shutdown"
         }
 
         $guardian = New-Case 'real-guardian-turn'
         Send $guardian $metaLine
         Send $guardian (Task-Line 'task_started' 'real-guardian-turn')
         Send $guardian (Context-Line 'real-guardian-turn')
-        Check 1 (Snapshot $guardian).ActiveCount 'real started guardian work still blocks'
+        Check 1 (Snapshot $guardian).ObservedActiveCount 'real started guardian work remains visible'
+        Check 0 (Snapshot $guardian).ActiveCount 'internal guardian work cannot block the parent'
         Check 0 (Snapshot $guardian).UnknownCount 'real guardian work is recognized rather than hidden'
         Send $guardian (Task-Line 'task_complete' 'real-guardian-turn')
         Check 0 (Snapshot $guardian).TaskCount 'real guardian completion clears its exact task'
         Send $guardian (Task-Line 'turn_started' 'guardian-abort-turn')
         Send $guardian (Context-Line 'guardian-abort-turn')
-        Check 1 (Snapshot $guardian).ActiveCount 'guardian second turn remains active'
+        Check 1 (Snapshot $guardian).ObservedActiveCount 'guardian second turn remains visible'
         Send $guardian (Task-Line 'turn_aborted' 'guardian-abort-turn')
         Check 0 (Snapshot $guardian).TaskCount 'real guardian abort clears its exact task'
 
@@ -137,7 +145,8 @@ try {
         Send $startedCompact $metaLine
         Send $startedCompact (Task-Line 'task_started' 'auto-compact-12')
         Send $startedCompact (Context-Line 'auto-compact-12')
-        Check 1 (Snapshot $startedCompact).ActiveCount 'explicitly started compact-looking turn is never suppressed'
+        Check 1 (Snapshot $startedCompact).ObservedActiveCount 'explicitly started compact-looking turn is never suppressed'
+        Check 0 (Snapshot $startedCompact).ActiveCount 'explicit internal work is still non-blocking'
         Check 'C:\ExampleProject' $startedCompact.Tracker.Turns['auto-compact-12'].Cwd 'started compact-looking context still binds project metadata'
         Send $startedCompact (Task-Line 'task_complete' 'auto-compact-12')
         Check 0 (Snapshot $startedCompact).TaskCount 'explicit compact-looking terminal event remains recognized'
@@ -160,14 +169,14 @@ try {
         Save-Lines $malformed @($metaLine, (Context-Line 'auto-compact-0'), '{"private_text":"PRIVATE_PARSE_ERROR_DO_NOT_RETAIN",broken')
         Update-CodexGuardTracker -Tracker $malformed.Tracker
         Check 0 (Snapshot $malformed).TaskCount 'guardian malformed file does not revive a synthetic task'
-        Check-Protected $malformed 'malformed guardian record'
+        Check-NonBlockingInternal $malformed 'malformed guardian record'
         Check $false (((Snapshot $malformed) | ConvertTo-Json -Depth 15 -Compress) -match 'PRIVATE_PARSE_ERROR_DO_NOT_RETAIN') 'malformed error reports expose no private record content'
 
         $partial = New-Case 'guardian-partial'
         Save-Lines $partial @($metaLine, (Context-Line 'auto-compact-0')) '{"type":"response_item","payload":'
         Update-CodexGuardTracker -Tracker $partial.Tracker
         Check 0 (Snapshot $partial).TaskCount 'partial guardian file does not revive a synthetic task'
-        Check-Protected $partial 'partial guardian record'
+        Check-NonBlockingInternal $partial 'partial guardian record'
         [IO.File]::AppendAllText($partial.Path, '{"type":"message"}}' + "`n", $utf8)
         Update-CodexGuardTracker -Tracker $partial.Tracker
         Check 0 (Snapshot $partial).UnknownCount 'completed guardian partial record clears only its read uncertainty'
@@ -178,7 +187,7 @@ try {
         $backlog.File.Position = 100
         $backlog.File.LastLength = 200
         Check $true (Snapshot $backlog).HasPendingReads 'guardian backlog remains explicit'
-        Check-Protected $backlog 'unread guardian backlog'
+        Check-NonBlockingInternal $backlog 'unread guardian backlog'
 
         $unreadable = New-Case 'guardian-unreadable'
         Save-Lines $unreadable @($metaLine, (Context-Line 'auto-compact-0'))
@@ -186,7 +195,7 @@ try {
         $locked = [IO.File]::Open($unreadable.Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::None)
         try {
             Update-CodexGuardTracker -Tracker $unreadable.Tracker
-            Check-Protected $unreadable 'unreadable guardian file'
+            Check-NonBlockingInternal $unreadable 'unreadable guardian file'
         }
         finally { $locked.Dispose() }
         Update-CodexGuardTracker -Tracker $unreadable.Tracker

@@ -157,7 +157,7 @@ export function startServer({ input = process.stdin, output = process.stdout, er
           result = {
             protocolVersion: SUPPORTED_PROTOCOLS.has(params.protocolVersion) ? params.protocolVersion : '2025-06-18',
             capabilities: { tools: { listChanged: false } },
-            serverInfo: { name: 'codex-shutdown-guard', version: '1.1.1' },
+            serverInfo: { name: 'codex-shutdown-guard', version: '1.1.2' },
             instructions: 'Uses the existing Windows Codex Shutdown Guard. Status is read-only. Controls require an explicit tool call; native queued requests need later status inspection. Arming can cause real PC shutdown.',
           };
           break;
