@@ -1,4 +1,39 @@
-# Release validation: 1.1.2
+# Release validation: 1.1.3
+
+Validated on Windows with Windows PowerShell 5.1 and Node.js on 2026-10-27. All existing native, bridge, MCP and setup suites listed for 1.1.2 below were rerun for this patch; the missing-session suite adds 120 checks. The table includes completed checks only.
+
+| Suite | Passed |
+| --- | ---: |
+| Native state machine | 90 |
+| Guardian review filtering | 118 |
+| Native repair and panel behavior | 66 |
+| Session and subagent identity | 67 |
+| Task status metadata | 31 |
+| Task manager layout | 126 |
+| Tray toggle | 20 |
+| Codex launch boundary | 72 |
+| Codex startup option | 83 |
+| Isolated startup process smoke | 16 |
+| Portable installation | 81 |
+| Installation process lifecycle | 47 |
+| Subagent shutdown policy | 210 |
+| Missing-session cleanup and task-record labels | 120 |
+| PowerShell bridge | 143 |
+| Node MCP | 8 |
+| Setup worker and native-operation result handling | 24 |
+| Optional plugin dependencies, installation and recovery | 102 |
+| Extracted-archive native wrappers | 18 |
+| Total | 1442 |
+
+The missing-session tests cover cleanup of confirmed-missing candidates without observed active or unknown turns, retention of missing files with unfinished turns, permission and I/O failure handling, and task ownership labels on pending or read-error rows. User logs and compressed copies remain outside the cleanup operation. Cleanup covers stale caches left by compression or archival; existing unread records retain their previous shutdown policy.
+
+The locally installed guard was refreshed while unarmed through the native installer. The configuration and both startup-preference files retained identical byte hashes. The compressed history copies checked during the update also retained identical SHA-256 hashes, and the installed core module and main script matched the source hashes. A fresh schema-8 runtime snapshot after history replay confirmed running=true, armed=false, readingHistory=false, historyBytesRemaining=0 and unknownCount=0. The stale pending-read entries were absent from task and diagnostic lists; observed main tasks remained blocking while child tasks did not.
+
+The extracted Windows archive completed 18 native public-wrapper checks for isolated clean installation, configuration-preserving upgrade, read-only inspection and uninstallation with -NoStart -NoShortcuts. All 31 packaged PowerShell scripts and modules parsed on Windows PowerShell 5.1.
+
+No real PC shutdown or reboot, Codex desktop restart, or acceptance test on another computer was performed.
+
+## Previous release: 1.1.2
 
 Validated on Windows with Windows PowerShell 5.1 and Node.js on 2026-10-22. All existing native suites listed below were rerun for this patch; the subagent-policy suite is new. The table includes completed checks only.
 

@@ -1,7 +1,7 @@
 {
-  "version": "1.1.2",
+  "version": "1.1.3",
   "source": "native/",
-  "snapshotDate": "2026-10-22",
+  "snapshotDate": "2026-10-27",
   "notes": "Latest native monitor and UI source with portable installation and shared installation discovery. User configuration, runtime state, sessions, logs and credentials are excluded.",
   "files": [
     {
@@ -21,8 +21,8 @@
     },
     {
       "path": "CodexShutdownGuard.Core.psm1",
-      "sha256": "ea3823a720a9ce401e3b32ed74369b045cab63321f591e99e3d1a3468999989c",
-      "bytes": 69312
+      "sha256": "f8d288e1bfb937e3df0e0c410a7bcd93c411f547c88f71bb9b528cb8f5629b29",
+      "bytes": 71264
     },
     {
       "path": "CodexShutdownGuard.Installation.psm1",
@@ -46,8 +46,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "8d0499206a36f599b04566712d3a7c01e2eacd5da36a4dc4dcbd5ab69c7ef52f",
-      "bytes": 17777
+      "sha256": "2492e3cea60a4595985d298a6d48b0b666b4658d912dec48acd1de5c3a92abb9",
+      "bytes": 18398
     },
     {
       "path": "Uninstall.ps1",
@@ -73,6 +73,11 @@
       "path": "tests/Test-CodexShutdownGuard.Guardian.ps1",
       "sha256": "bce25ef0464ef3614050187f5b9fa43c1f3f1c8a9093091d0b77a2169856f57f",
       "bytes": 16624
+    },
+    {
+      "path": "tests/Test-CodexShutdownGuard.MissingSessions.ps1",
+      "sha256": "14a8fa030fc23f1d010091332e561a40c6112c190e8a69c3daa5e7cc4580313b",
+      "bytes": 18911
     },
     {
       "path": "tests/Test-CodexShutdownGuard.PortableInstallation.ps1",

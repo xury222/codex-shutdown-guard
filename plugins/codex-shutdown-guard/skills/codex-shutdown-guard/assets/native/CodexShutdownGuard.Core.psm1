@@ -313,6 +313,8 @@ function Get-CodexGuardTaskTooltip {
     }
     $reason = [string](Get-CodexGuardJsonProperty $Entry 'Reason')
     if (Test-CodexGuardChildTask $Entry) { $parts.Add('子代理和内部审批不阻止关机，等待状态由主任务决定。') }
+    $path = [string](Get-CodexGuardJsonProperty $Entry 'Path')
+    if ($path) { $parts.Add(('记录文件：' + $path)) }
     if ($reason) { $parts.Add($reason) }
     return $parts -join "`r`n"
 }
@@ -363,12 +365,14 @@ function Get-CodexGuardTaskManagerRows {
     foreach ($unknown in @($Snapshot.AllUnknownItems | Where-Object { [string]::IsNullOrWhiteSpace([string]$_.TurnId) })) {
         $isPending = $unknown.Kind -eq 'PendingRead'
         $isChild = Test-CodexGuardChildTask $unknown
+        $hasThread = -not [string]::IsNullOrWhiteSpace([string](Get-CodexGuardJsonProperty $unknown 'ThreadId'))
+        $updated = Get-CodexGuardJsonProperty $unknown 'LastUpdatedAtUtc'
         $rows.Add([pscustomobject]@{
-            TurnId=''; Title=if ($isChild) { Get-CodexGuardTaskDisplayTitle $unknown $ThreadTitles } elseif ($isPending) { '正在读取任务记录' } else { '无法归属到具体任务的异常' }
+            TurnId=''; Title=if ($hasThread) { Get-CodexGuardTaskDisplayTitle $unknown $ThreadTitles } elseif ($isPending) { '正在读取任务记录' } else { '无法归属到具体任务的异常' }
             StateText=if ($isChild) { if ($isPending) { '读取中 · 不阻塞' } else { '异常 · 不阻塞' } } elseif ($isPending) { '读取中 · 阻塞' } else { '系统异常 · 不可无视' }
             ThreadId=[string](Get-CodexGuardJsonProperty $unknown 'ThreadId'); ParentThreadId=[string](Get-CodexGuardJsonProperty $unknown 'ParentThreadId')
             TaskType=[string](Get-CodexGuardJsonProperty $unknown 'TaskType'); TaskTypeLabel=(Get-CodexGuardTaskTypeLabel $unknown)
-            Cwd=[string](Get-CodexGuardJsonProperty $unknown 'Cwd'); Updated='未知'; Checked=$false; Tooltip=if ($isChild) { Get-CodexGuardTaskTooltip $unknown $ThreadTitles } else { [string]$unknown.Reason }; Tone=if ($isChild) { 'Warning' } else { 'Error' }
+            Cwd=[string](Get-CodexGuardJsonProperty $unknown 'Cwd'); Updated=if ($null -ne $updated -and [datetime]$updated -gt [datetime]::MinValue) { ([datetime]$updated).ToLocalTime().ToString('MM-dd HH:mm:ss') } else { '未知' }; Checked=$false; Tooltip=if ($hasThread) { Get-CodexGuardTaskTooltip $unknown $ThreadTitles } else { [string]$unknown.Reason }; Tone=if ($isChild) { 'Warning' } else { 'Error' }
         })
     }
     if ($rows.Count -eq 0) {
@@ -1062,6 +1066,26 @@ function Add-CodexGuardCandidateFile {
     $Tracker.Files[$File.FullName].LastLength = $File.Length
 }
 
+function Remove-CodexGuardMissingCandidate {
+    param([object]$Tracker, [string]$Path)
+    # Only call after a definite file-not-found result. Permission failures and
+    # unavailable storage do not establish that the candidate has disappeared.
+    $hasUnfinishedTurn = @($Tracker.Turns.Values | Where-Object {
+        $_.FilePath -eq $Path -and $_.State -eq 'Active'
+    }).Count -gt 0 -or @($Tracker.UnknownTurns.Values | Where-Object {
+        $_.FilePath -eq $Path
+    }).Count -gt 0
+    if ($hasUnfinishedTurn) {
+        $Tracker.ReadErrors[$Path] = 'A session file disappeared while its task completion was still unconfirmed.'
+    }
+    else {
+        # A removed/archived candidate with no observed unfinished work is no
+        # longer a pending read. Preserve logs and completed-turn history.
+        [void]$Tracker.Files.Remove($Path)
+        [void]$Tracker.ReadErrors.Remove($Path)
+    }
+}
+
 function Update-CodexGuardTracker {
     param(
         [Parameter(Mandatory = $true)]
@@ -1097,20 +1121,22 @@ function Update-CodexGuardTracker {
         $pathIndex = ($Tracker.ReadCursor + $scanIndex) % $paths.Count
         $path = $paths[$pathIndex]
         $fileState = $Tracker.Files[$path]
-        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-            $hasActiveTurn = @(
-                $Tracker.Turns.Values |
-                    Where-Object { $_.FilePath -eq $path -and $_.State -eq 'Active' }
-            ).Count -gt 0
-            if ($hasActiveTurn) {
-                $Tracker.ReadErrors[$path] = 'A session file disappeared while its turn was active.'
-            }
+        try {
+            $currentFile = Get-Item -LiteralPath $path -ErrorAction Stop
+            if ($currentFile -isnot [IO.FileInfo]) { throw 'The session path is no longer a regular file.' }
+        }
+        catch [Management.Automation.ItemNotFoundException] {
+            Remove-CodexGuardMissingCandidate -Tracker $Tracker -Path $path
+            continue
+        }
+        catch {
+            $Tracker.ReadErrors[$path] = "Unable to read session file: $($_.Exception.Message)"
             continue
         }
 
         try {
             $startPosition = [long]$fileState.Position
-            if ((Get-Item -LiteralPath $path).Length -lt $startPosition) {
+            if ($currentFile.Length -lt $startPosition) {
                 $startPosition = [long]0
                 Reset-CodexGuardFileIdentity -FileState $fileState
             }
@@ -1128,19 +1154,24 @@ function Update-CodexGuardTracker {
             foreach ($metadata in $batch.Events) {
                 Register-CodexGuardLine -Tracker $Tracker -FileState $fileState -Metadata $metadata
             }
-            $fileState.LastWriteUtc = (Get-Item -LiteralPath $path).LastWriteTimeUtc
+            $fileState.LastWriteUtc = (Get-Item -LiteralPath $path -ErrorAction Stop).LastWriteTimeUtc
             if (
                 $Tracker.ReadErrors.ContainsKey($path) -and
                 (
                     $Tracker.ReadErrors[$path] -like 'Unable to read session file:*' -or
-                    $Tracker.ReadErrors[$path] -eq 'A session file disappeared while its turn was active.'
+                    $Tracker.ReadErrors[$path] -in @('A session file disappeared while its turn was active.', 'A session file disappeared while its task completion was still unconfirmed.')
                 )
             ) {
                 [void]$Tracker.ReadErrors.Remove($path)
             }
         }
         catch {
-            $Tracker.ReadErrors[$path] = "Unable to read session file: $($_.Exception.Message)"
+            $readException = $_.Exception.GetBaseException()
+            if ($readException -is [IO.FileNotFoundException] -or $readException -is [IO.DirectoryNotFoundException] -or
+                $_.Exception -is [Management.Automation.ItemNotFoundException]) {
+                Remove-CodexGuardMissingCandidate -Tracker $Tracker -Path $path
+            }
+            else { $Tracker.ReadErrors[$path] = "Unable to read session file: $($_.Exception.Message)" }
         }
     }
     if ($paths.Count -gt 0) { $Tracker.ReadCursor = ($Tracker.ReadCursor + $scanIndex) % $paths.Count }
@@ -1258,7 +1289,7 @@ function Get-CodexGuardSnapshot {
         $allUnknownItems.Add([pscustomobject]@{
             Kind = if ($pathProblems[$path].Kind -eq 'IncompleteActiveTurn') { 'IncompleteEvent' }
                 elseif ($pathProblems[$path].Kind -eq 'PendingReadActiveTurn') { 'PendingRead' } else { 'ReadError' }
-            Id=''; TurnId=''; ThreadId=$identity.ThreadId; Cwd=$identity.Cwd; Path=$path; StartedAtUtc=$null; LastUpdatedAtUtc=$null
+            Id=''; TurnId=''; ThreadId=$identity.ThreadId; Cwd=$identity.Cwd; Path=$path; StartedAtUtc=$null; LastUpdatedAtUtc=$identity.LastWriteUtc
             ParentThreadId=$identity.ParentThreadId; TaskType=$identity.TaskType
             AgentName=$identity.AgentName; AgentRole=$identity.AgentRole; AgentPath=$identity.AgentPath
             ThreadSource=$identity.ThreadSource; SessionSource=$identity.SessionSource

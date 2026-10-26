@@ -12,7 +12,8 @@
 - 必须先观察到至少一个运行中的主任务回合，然后确认主任务完成；只有子代理时继续等待首个主任务。
 - 并行主对话、主任务中的审批等待、用户输入等待和长时间工具调用会继续阻止关机。已识别的子代理和内部审批不会单独阻止关机。
 - 主任务或来源未识别的状态无法读取、事件格式不兼容，以及 Codex 退出或 App Server 不可用时暂停关机。
-- 会话文件消失或无法读取的回合会从“活动任务”移到“状态异常”，不会重复计数。主任务和来源未识别的异常会阻止关机；已识别子代理和内部审批的异常只供查看。
+- 已观察到活动或状态未知回合后，会话文件消失或无法读取时，保留“状态异常”，不会重复计数。主任务和来源未识别的异常会阻止关机；已识别子代理和内部审批的异常只供查看。
+- 文件已确认移除且没有已观测未结束回合的历史候选记录会从内存缓存清理，不再留下永久“读取中”占位。清理不会删除用户会话、压缩副本或已完成回合的历史记录；权限或其他 I/O 错误不会触发此清理。
 - 活动和异常任务保留为可查看条目；用户可以按精确回合 ID 选择“无视”，被无视的条目仍会显示。子代理不需要勾选无视即可免于阻塞。
 - “无视”只对当前回合有效并保存在当前 Codex 应用会话中；同一任务开始新回合或 Codex 重启后不会继承旧的无视决定。
 - 无法归属到具体任务的全局读取异常不可无视，继续采用 fail-closed 策略阻止关机。
@@ -103,7 +104,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1
 - 管理窗口每秒检查最新扫描快照，随每分钟任务扫描自动更新列表；刷新保留同一回合尚未应用的勾选，新回合不会继承旧选择。
 - 管理窗口分别统计主任务、子代理和内部审批，并显示扫描时间。子代理优先使用记录中的任务路径末段和代理名，注明所属父任务；悬停可查看父线程、角色和完整代理路径。未记录名称时保留短 ID，不从提示词或回复中猜测名称。
 - 顶部说明与统计按文字自动换行，窗口可调整大小和最大化，列表与列宽随窗口伸缩。
-- 会话文件已经消失或长期不再更新的疑似失联任务仍会显示在清单中。主任务默认继续阻止关机，用户可明确勾选无视；子代理和内部审批显示“不阻塞”，无需手动排除。
+- 未结束回合的会话文件已经消失，或长期不再更新时，异常仍会显示在清单中。主任务默认继续阻止关机，用户可明确勾选无视；子代理和内部审批显示“不阻塞”，无需手动排除。无未结束回合的已移除文件不保留读取占位。
+- 尚无回合 ID 的读取或异常行也会带已有任务名或线程 ID，并保留项目目录和具体原因，便于区分多条记录。
 - 面板右下角的 `○ 关闭` / `● 开启` 按钮是“本轮完成后关机”双态开关：点击关闭态进行布防，再次点击开启态会撤销关机并解除布防；它与托盘菜单状态同步。
 - 可以直接拖动窗口；位置与显示/隐藏状态会保存在 `%LOCALAPPDATA%\CodexShutdownGuard\usage-panel-state.json`。
 - 关闭面板只会隐藏它，不会退出守卫；双击托盘图标或勾选“显示用量面板”即可恢复。
@@ -179,6 +181,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\Test-CodexShutdo
 powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File .\tests\Test-CodexShutdownGuard.Repair.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\Test-CodexShutdownGuard.TaskIdentity.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\Test-CodexShutdownGuard.SubagentPolicy.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\Test-CodexShutdownGuard.MissingSessions.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\Test-CodexShutdownGuard.StatusMetadata.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\Test-CodexShutdownGuard.StartupLifecycle.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File .\tests\Test-CodexShutdownGuard.TaskManagerLayout.ps1 -OutputDirectory "$env:TEMP\CodexGuardLayoutPreviews"

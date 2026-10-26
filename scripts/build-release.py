@@ -79,7 +79,7 @@ def main():
     if output == ROOT or (ROOT in output.parents and output != ROOT / "dist"):
         raise ValueError("Use dist or a directory outside the repository for build output")
     version = check_tree()
-    source_manifest = {"version": version, "source": "native/", "snapshotDate": "2026-10-22", "notes": "Latest native monitor and UI source with portable installation and shared installation discovery. User configuration, runtime state, sessions, logs and credentials are excluded.", "files": [{"path": p.relative_to(NATIVE).as_posix(), "sha256": digest(p), "bytes": p.stat().st_size} for p in files(NATIVE)]}
+    source_manifest = {"version": version, "source": "native/", "snapshotDate": "2026-10-27", "notes": "Latest native monitor and UI source with portable installation and shared installation discovery. User configuration, runtime state, sessions, logs and credentials are excluded.", "files": [{"path": p.relative_to(NATIVE).as_posix(), "sha256": digest(p), "bytes": p.stat().st_size} for p in files(NATIVE)]}
     write_json(PLUGIN / "skills" / "codex-shutdown-guard" / "assets" / "source-manifest.json", source_manifest)
     inventory(PLUGIN, "FILES.sha256")
     inventory(ROOT, "SOURCE_SHA256SUMS.txt")
