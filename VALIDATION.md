@@ -1,4 +1,37 @@
-# Release validation: 1.1.3
+# Release validation: 1.2.0
+
+Validated on Windows with Windows PowerShell 5.1 on 2026-10-27. The complete native, setup and standalone-package suites below were rerun against the extracted Windows ZIP. The table records this release's checks; historical MCP, bridge and chat-plugin suites are no longer applicable.
+
+| Suite | Passed |
+| --- | ---: |
+| Native state machine | 90 |
+| Guardian review filtering | 118 |
+| Native repair and panel behavior | 66 |
+| Session and subagent identity | 67 |
+| Task status metadata | 31 |
+| Task manager layout | 126 |
+| Tray toggle | 20 |
+| Codex launch boundary | 72 |
+| Codex startup option | 83 |
+| Isolated startup process smoke | 16 |
+| Portable installation | 81 |
+| Installation process lifecycle | 47 |
+| Subagent shutdown policy | 210 |
+| Missing-session cleanup and task-record labels | 120 |
+| Standalone setup worker and result handling | 32 |
+| Standalone setup window | 62 |
+| Isolated standalone native-package smoke | 23 |
+| Total | 1264 |
+
+All 26 packaged PowerShell scripts and modules parsed on Windows PowerShell 5.1. The native suites account for 1147 checks. The isolated package smoke covered installation, configuration-preserving update and uninstall without starting a real guard. Four setup-window screenshots, including default and larger-font views, were inspected for clipped text.
+
+An independent source audit compared 24 non-README native files with the 1.1.3 baseline and found them byte-for-byte identical. Both root CMD launchers also retained identical bytes. The 43-file Windows archive contains the standalone program, installer, tests and documentation, with no plugin manifests, marketplace, MCP server or bridge, skills, Node server or Node dependency. The build rereads archive CRCs and file hashes.
+
+For the installed copy, only the Codex chat integration was removed. The installed-plugin list and available tools confirmed that its control entry points were no longer registered. The existing native process retained its start time and singleton mutex; fresh status continued to report running=true and armed=true. Installed native files, config.json, startup and proxy-launch preferences, installation registration, task-ignore state and panel preferences retained identical byte hashes.
+
+No real native installation, restart, stop, arm or disarm operation was performed on the user's guard. No actual PC shutdown, reboot or Codex desktop restart was tested. The live checks establish preservation during chat-plugin removal; they do not establish real shutdown acceptance or acceptance on another computer.
+
+## Previous release: 1.1.3
 
 Validated on Windows with Windows PowerShell 5.1 and Node.js on 2026-10-27. All existing native, bridge, MCP and setup suites listed for 1.1.2 below were rerun for this patch; the missing-session suite adds 120 checks. The table includes completed checks only.
 

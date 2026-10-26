@@ -1,6 +1,6 @@
 # CodexShutdownGuard
 
-`CodexShutdownGuard` 是一个面向 Windows 版 Codex 桌面应用的跨对话自动关机与用量显示工具。
+`CodexShutdownGuard` 是面向 Windows 版 Codex 桌面应用的独立托盘程序，提供跨对话自动关机与用量显示。1.2.0 移除 MCP 和聊天控制入口，原有功能通过桌面快捷方式、用量面板和托盘操作。
 
 守卫统一观察本机 Codex 主任务，每 1 分钟读取一次任务状态。连续 3 次确认主任务已完成、没有影响主任务判断的未知状态后，再经过 3 分钟关机缓冲，才会调用 Windows 原生关机命令。子代理和内部审批保留在列表中，不单独阻止关机。
 
@@ -33,11 +33,11 @@
 - 缓冲期间出现新主任务时自动撤销倒计时，并继续等待；子代理活动不撤销倒计时。
 - 日志不保存提示词、回复内容或工具输出。
 
-v1 只覆盖本机 Codex 桌面端，不覆盖 ChatGPT 网页、云端任务或其他程序的后台进程。
+本程序只覆盖本机 Codex 桌面端，不覆盖 ChatGPT 网页、云端任务或其他程序的后台进程。
 
 ## 安装
 
-在 PowerShell 中运行：
+普通安装可在完整 Windows 包根目录双击 `Install.cmd`。手动安装时，在本目录打开 PowerShell 并运行：
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1
@@ -54,7 +54,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1
 
 安装器优先使用显式 `-InstallRoot`，否则读取 `%LOCALAPPDATA%\CodexShutdownGuard\installation.json` 注册的安装目录，再查找带产品标记的当前用户默认目录和旧版 `D:\Program\CodexShutdownGuard`。旧版已标记安装会原地更新；无产品标记的非空目录不会被覆盖。更新保留现有 `config.json`、任务无视列表和偏好，运行中的守卫必须先处于未布防状态。显式更换 `StateRoot` 前，必须先退出旧状态目录对应的守卫和检测器；安装器不会同时开启另一套监控。
 
-注册文件记录 `schemaVersion: 1`、`product: CodexShutdownGuard`、完整 `installRoot` 和 `stateRoot`，只在安装完成后原子写入。需要自定义状态位置时可使用 `-StateRoot`；之后省略该参数，安装器、卸载器、插件和原生命令行均沿用注册值。`-NoShortcuts` 可跳过桌面及登录快捷方式的创建；它与 `-NoStart` 一起适合隔离验证。安装包不含个人配置、会话、状态或日志。
+注册文件记录 `schemaVersion: 1`、`product: CodexShutdownGuard`、完整 `installRoot` 和 `stateRoot`，只在安装完成后原子写入。需要自定义状态位置时可使用 `-StateRoot`；之后省略该参数，安装器、卸载器和原生命令行均沿用注册值。`-NoShortcuts` 可跳过桌面及登录快捷方式的创建；它与 `-NoStart` 一起适合隔离验证。安装包不含个人配置、会话、状态或日志。
 
 ## 日常使用
 
@@ -190,6 +190,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File .\tests\Test-CodexS
 真正的 Windows 关机链路测试不包含在自动测试中。只有用户明确要求时，才应安排一次 30 秒关机并立即用 `shutdown.exe /a` 撤销。
 
 ## 卸载
+
+完整 Windows 包根目录的 `Uninstall.cmd` 可打开守卫卸载窗口；也可在本目录运行：
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Uninstall.ps1

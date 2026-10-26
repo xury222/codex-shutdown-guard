@@ -4,19 +4,15 @@ function Assert-CodexGuardSetupPackage {
     param([Parameter(Mandatory = $true)][string]$PackageRoot)
     $root = [IO.Path]::GetFullPath($PackageRoot).TrimEnd('\', '/')
     $required = @(
-        'plugins\codex-shutdown-guard\plugin.json',
-        'plugins\codex-shutdown-guard\Install.ps1',
-        'plugins\codex-shutdown-guard\Uninstall.ps1',
-        'plugins\codex-shutdown-guard\skills\codex-shutdown-guard\assets\native\Install.ps1',
-        'plugins\codex-shutdown-guard\skills\codex-shutdown-guard\assets\native\CodexShutdownGuard.ps1',
-        'scripts\Setup.ps1', 'scripts\Setup.Core.psm1', 'scripts\Setup.Plugin.psm1'
+        'product.json', 'native\Install.ps1', 'native\Uninstall.ps1',
+        'native\CodexShutdownGuard.ps1', 'scripts\Setup.ps1', 'scripts\Setup.Core.psm1'
     )
     foreach ($relative in $required) {
         if (-not [IO.File]::Exists((Join-Path $root $relative))) {
             throw 'The package is incomplete. Extract the entire Windows ZIP before starting setup.'
         }
     }
-    $manifest = [IO.File]::ReadAllText((Join-Path $root $required[0]), [Text.Encoding]::UTF8) | ConvertFrom-Json
+    $manifest = [IO.File]::ReadAllText((Join-Path $root 'product.json'), [Text.Encoding]::UTF8) | ConvertFrom-Json
     if ($manifest.name -cne 'codex-shutdown-guard' -or $manifest.version -notmatch '^\d+\.\d+\.\d+$') {
         throw 'The package identity or version is invalid.'
     }
@@ -26,38 +22,29 @@ function Assert-CodexGuardSetupPackage {
 function Invoke-CodexGuardSetupOperation {
     param(
         [Parameter(Mandatory = $true)][string]$PackageRoot,
-        [ValidateSet('Install', 'Uninstall')][string]$Mode = 'Install',
-        [switch]$InstallChatPlugin
+        [ValidateSet('Install', 'Uninstall')][string]$Mode = 'Install'
     )
-    $result = [ordered]@{ ok = $false; mode = $Mode; version = $null; nativeInstalled = $false; uninstalled = $false; pluginInstalled = $false; pluginRequested = [bool]$InstallChatPlugin; pluginOutcome = $null; error = $null }
+    $result = [ordered]@{ ok = $false; mode = $Mode; version = $null; nativeInstalled = $false; uninstalled = $false; nativeResult = $null; error = $null }
     try {
         $package = Assert-CodexGuardSetupPackage -PackageRoot $PackageRoot
         $result.version = $package.Version
-        $pluginRoot = Join-Path $package.Root 'plugins\codex-shutdown-guard'
+        $nativeRoot = Join-Path $package.Root 'native'
         if ($Mode -eq 'Uninstall') {
-            if ($InstallChatPlugin) { throw 'Installing a chat plugin is not an uninstall operation.' }
-            $native = & (Join-Path $pluginRoot 'Uninstall.ps1')
-            if ($null -eq $native -or -not $native.Uninstalled) { throw 'The native uninstaller did not confirm success.' }
+            $native = & (Join-Path $nativeRoot 'Uninstall.ps1')
+            if ($null -eq $native -or $null -eq $native.PSObject.Properties['Uninstalled'] -or $native.Uninstalled -isnot [bool] -or -not $native.Uninstalled) {
+                throw 'The native uninstaller did not confirm success.'
+            }
             $result.uninstalled = $true
         }
         else {
-            # Keep path discovery, byte-preserving upgrades, and armed-instance rejection in the native installer.
-            $native = & (Join-Path $pluginRoot 'Install.ps1')
-            if ($null -eq $native -or -not $native.Installed) { throw 'The native installer did not confirm success.' }
-            $result.nativeInstalled = $true
-            if ($InstallChatPlugin) {
-                Import-Module (Join-Path $package.Root 'scripts\Setup.Plugin.psm1') -Force -ErrorAction Stop
-                $chat = Install-CodexGuardChatPlugin -PackageRoot $package.Root
-                if ($null -eq $chat) { throw 'The chat plugin installer did not confirm success.' }
-                if ($null -ne $chat.PSObject.Properties['code']) { $result.pluginOutcome = [string]$chat.code }
-                if (-not $chat.ok) {
-                    $failure = [string]$chat.message
-                    if ($null -ne $chat.PSObject.Properties['details'] -and -not [string]::IsNullOrWhiteSpace([string]$chat.details)) { $failure += [Environment]::NewLine + [string]$chat.details }
-                    throw $failure
-                }
-                $result.pluginInstalled = $true
+            # Keep discovery, configuration preservation and armed-instance rejection in the native installer.
+            $native = & (Join-Path $nativeRoot 'Install.ps1')
+            if ($null -eq $native -or $null -eq $native.PSObject.Properties['Installed'] -or $native.Installed -isnot [bool] -or -not $native.Installed) {
+                throw 'The native installer did not confirm success.'
             }
+            $result.nativeInstalled = $true
         }
+        $result.nativeResult = $native
         $result.ok = $true
     }
     catch { $result.error = $_.Exception.Message }
@@ -71,13 +58,12 @@ function ConvertTo-CodexGuardSetupArgument {
 }
 
 function Start-CodexGuardSetupWorker {
-    param([Parameter(Mandatory = $true)][string]$PackageRoot, [ValidateSet('Install', 'Uninstall')][string]$Mode, [switch]$InstallChatPlugin)
+    param([Parameter(Mandatory = $true)][string]$PackageRoot, [ValidateSet('Install', 'Uninstall')][string]$Mode = 'Install')
     $package = Assert-CodexGuardSetupPackage -PackageRoot $PackageRoot
     $directory = Join-Path ([IO.Path]::GetTempPath()) ('CodexGuardSetup-' + [guid]::NewGuid().ToString('N'))
     [void][IO.Directory]::CreateDirectory($directory)
     $resultPath = Join-Path $directory 'result.json'
     $arguments = @('-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-STA', '-File', (ConvertTo-CodexGuardSetupArgument (Join-Path $package.Root 'scripts\Setup.ps1')), '-Worker', '-PackageRoot', (ConvertTo-CodexGuardSetupArgument $package.Root), '-Mode', $Mode, '-ResultPath', (ConvertTo-CodexGuardSetupArgument $resultPath))
-    if ($InstallChatPlugin) { $arguments += '-InstallChatPlugin' }
     $start = New-Object Diagnostics.ProcessStartInfo
     $start.FileName = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
     $start.Arguments = $arguments -join ' '

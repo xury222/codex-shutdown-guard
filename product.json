@@ -1,0 +1,7 @@
+{
+  "name": "codex-shutdown-guard",
+  "version": "1.2.0",
+  "displayName": "Codex 关机守卫",
+  "description": "Standalone Windows Codex task monitor, quota panel and guarded shutdown tool.",
+  "platform": "windows"
+}
